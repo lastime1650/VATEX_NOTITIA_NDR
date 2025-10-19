@@ -105,9 +105,8 @@ static __always_inline int packet(struct __sk_buff *skb, bool is_ingress) {
         Key -> Process Id Type
         Value -> 0 or 1
     */
-    __u64 pid_tgid = bpf_get_current_pid_tgid();
-    __u64 key = pid_tgid >> 32; // 상위 32비트가 tgid   
-    bpf_printk("[DEBUG] current pid_tgid: %llu, tgid(key): %llu\n", pid_tgid, key);
+    __u64 key = BPF_CORE_READ(task, pid);
+    bpf_printk("[DEBUG] current pid(key): %llu\n", key);
 
     u8* value_p = bpf_map_lookup_elem(&user_hash, &key);
     if (value_p && *value_p == 1) {

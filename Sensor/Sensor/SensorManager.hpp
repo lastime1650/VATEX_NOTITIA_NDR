@@ -3,6 +3,8 @@
 
 #include "../util/util.hpp"
 
+#include "PacketFlow/PacketFlow.hpp"
+
 namespace NDR
 {
     namespace Sensor
@@ -10,7 +12,48 @@ namespace NDR
         class Manager
         {
             public:
+                Manager(std::string FlowRuleDir)
+                : FlowManger(FlowRuleDir)
+                {}
+
+                ~Manager()
+                {
+                    this->Stop();
+                }
+
+                bool Run()
+                {
+                    if(is_running)
+                        return false;
+                    
+                    
+                    if( FlowManger.Run() )
+                        is_running = true;
+                    else
+                        is_running = false;
+
+                    return is_running;
+                }
+
+                bool Stop()
+                {
+                    if(!is_running)
+                        return false;
+
+                    if( FlowManger.Stop() )
+                        is_running = false;
+                    else
+                        is_running = true;
+
+                    return !is_running ? true : false ;
+                }
+
+
             private:
+                NDR::Sensor::PacketFlow::PacketFlowManager FlowManger;
+
+                bool is_running = false;
+
         };
     }
 }

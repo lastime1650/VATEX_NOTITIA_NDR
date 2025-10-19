@@ -8,7 +8,7 @@
     ebpf skels 
 */
 extern "C" {
-    #include "../../../../ebpf/Network/network.bpf.skel.h"
+    #include "../../../ebpf/Network/network.bpf.skel.h"
 }
 
 namespace NDR
@@ -23,9 +23,8 @@ namespace NDR
                 CTX.RawPacketSize = data->pkt_len;
 
                 // packet
-                CTX.RawPacket = new unsigned char[data->pkt_len]; // 해제는 큐 수신부가 ...
-                memcpy(CTX.RawPacket, data->RawPacket, data->pkt_len); 
-
+                CTX.PacketEvent = new unsigned char[data_sz]; // 해제는 큐 수신부가 ...
+                memcpy(CTX.PacketEvent, (unsigned char*)data, data_sz); 
                 CTX.timestamp = NDR::Util::timestamp::Get_Real_Timestamp();
 
                 queue->putRaw(&CTX);
@@ -134,6 +133,9 @@ namespace NDR
                         std::string ifname(ifa->ifa_name);
                         if(seen_ifnames.count(ifname))
                             continue;
+
+                        std::cout << ifname << std::endl;
+
                         seen_ifnames.insert(ifname);
 
                         std::cout << "Setting up TC eBPF for interface: " << ifname << std::endl;
@@ -234,10 +236,10 @@ namespace NDR
                         while(this->is_running) {
                             for (auto rb : ring_buffers_to_poll) {
                                 // non-blocking poll (timeout=0) 또는 짧은 timeout
-                                ring_buffer__poll(rb, 10); 
+                                ring_buffer__poll(rb, 5); 
                             }
                             // 모든 링버퍼를 폴링한 후 잠시 대기하여 CPU 사용률을 낮춤
-                            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                            //std::this_thread::sleep_for(std::chrono::milliseconds(50));
                         }
                         std::cout << "Network RingBuff_Polling_thread stopped." << std::endl;
                     });

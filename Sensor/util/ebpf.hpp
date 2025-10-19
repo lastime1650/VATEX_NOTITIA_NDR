@@ -50,7 +50,9 @@ namespace NDR
                 {
                     unsigned long long timestamp;
                     unsigned long RawPacketSize;
-                    unsigned char* RawPacket;
+
+                    
+                    unsigned char* PacketEvent;
                 };
             }
         }

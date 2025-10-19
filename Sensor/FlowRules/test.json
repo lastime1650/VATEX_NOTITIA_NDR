@@ -1,0 +1,52 @@
+{
+    "id": "tcp-handshake-detect",
+    "description": "Detects normal TCP 3-way handshake sequence",
+    "severity": "info",
+
+    "sequence": [
+        {
+            "index": "Syn",
+            "condition": {
+                "tcp": {
+                    "flags": ["S"],
+                    "src_port": "any",
+                    "dst_port": "any"
+                }
+            },
+            "action": {
+                "type": "notice",
+                "message": "TCP SYN"
+            },
+            "direction" : "out",
+            "threshold" : {
+                "pktcount" : 1
+            }
+        },
+        {
+            "index": "Syn+Ack",
+            "condition": {
+                "tcp": {
+                    "flags": ["S", "A"]
+                }
+            },
+            "timestamp": {
+                "nano": 2000000000
+            }
+        },
+        {
+            "index": "Ack",
+            "condition": {
+                "tcp": {
+                    "flags": ["A"]
+                }
+            },
+            "timestamp": {
+                "nano": 2000000000
+            },
+            "action": {
+                "type": "notice",
+                "message": "TCP 3-way handshake completed"
+            }
+        }
+    ]
+}
