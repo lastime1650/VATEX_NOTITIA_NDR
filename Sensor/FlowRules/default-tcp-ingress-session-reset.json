@@ -1,0 +1,16 @@
+{
+    "id": "default-tcp-ingress-session-reset",
+    "description": "Detects an abrupt TCP session termination via an RST flag sent from an external host.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Rst-Received",
+            "condition": { "tcp": { "flags": ["R", "A"] }},
+            "direction": "in",
+            "action": {
+                "type": "notice",
+                "message": "Ingress TCP session reset (RST received)"
+            }
+        }
+    ]
+}

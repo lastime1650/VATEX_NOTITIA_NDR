@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <cstdint>
+#include <regex>
 
 namespace NDR
 {
@@ -16,9 +17,35 @@ namespace NDR
                 public:
                     FileHandler() = default;
 
+                    // 파일 존재여부 체크
+                    bool is_valid_file(std::string filepath)
+                    {
+                        std::ifstream inFile(filepath, std::ios::binary);
+                        bool is_valid = inFile.is_open();
+                        inFile.close();
+                        return is_valid;
+                    }
+
+                    // Regex 기반 파일 찾기
+                    std::vector<std::string> findFilesByPattern(const std::string& dirPath, std::regex& pattern) {
+                        std::vector<std::string> matchedFiles;
+
+                        for (const auto& entry : std::filesystem::directory_iterator(dirPath)) {
+                            if (entry.is_regular_file()) {
+                                const std::string filename = entry.path().filename().string();
+                                if (std::regex_match(filename, pattern)) {
+                                    matchedFiles.push_back(entry.path().string());
+                                }
+                            }
+                        }
+
+                        return matchedFiles;
+                    }
+
                     // 바이너리 파일 쓰기
                     bool writeToFile(const std::string& filename, const std::vector<uint8_t>& data, bool append = false) {
                         std::ofstream outFile;
+                        
                         if (append)
                             outFile.open(filename, std::ios::binary | std::ios::app);
                         else

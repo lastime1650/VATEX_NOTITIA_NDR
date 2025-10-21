@@ -1,5 +1,5 @@
 {
-    "id": "tcp-handshake-detect",
+    "id": "default-egress-tcp-session",
     "description": "Detects normal TCP 3-way handshake sequence",
     "severity": "info",
 
@@ -13,14 +13,11 @@
                     "dst_port": "any"
                 }
             },
-            "action": {
-                "type": "notice",
-                "message": "TCP SYN"
-            },
             "direction" : "out",
             "threshold" : {
                 "pktcount" : 1
-            }
+            },
+            "goto" : "Syn+Ack"
         },
         {
             "index": "Syn+Ack",
@@ -29,9 +26,11 @@
                     "flags": ["S", "A"]
                 }
             },
-            "timestamp": {
-                "nano": 2000000000
+            "action": {
+                "type": "notice",
+                "message": "TCP session opening"
             }
+
         },
         {
             "index": "Ack",

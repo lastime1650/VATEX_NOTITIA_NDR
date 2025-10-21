@@ -1,0 +1,30 @@
+{
+    "id": "default-egress-tcp-session-established",
+    "description": "Detects a TCP session initiated from the internal network (outbound connection).",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Syn",
+            "condition": { "tcp": { "flags": ["S"] }},
+            "direction": "out",
+            "goto": "SynAck"
+        },
+        {
+            "index": "SynAck",
+            "condition": { "tcp": { "flags": ["S", "A"] }},
+            "direction": "in",
+            "timestamp": { "nano": 5000000000 },
+            "goto": "Ack"
+        },
+        {
+            "index": "Ack",
+            "condition": { "tcp": { "flags": ["A"] }},
+            "direction": "out",
+            "timestamp": { "nano": 5000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Egress TCP session established"
+            }
+        }
+    ]
+}

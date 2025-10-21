@@ -1,9 +1,13 @@
 #ifndef PktSession_HPP
 #define PktSession_HPP
 
+
+
 #include "../../../util/util.hpp"
 
 #include "../FlowRule/FlowRuleManager.hpp"
+
+#include "../ToPcaps/ToPcap.hpp"
 
 #include <pcapplusplus/Packet.h>
 
@@ -64,6 +68,9 @@ namespace NDR
 				unsigned long long first_seen_nanotimestamp;
 				unsigned long long last_seen_nanotimestamp;
 
+				// To Pcap
+				NDR::Sensor::ToPcap::ToPcap ToPcapFileSaver;
+
                 // NetworkSessionPtr
                 class NetworkSession* parent = nullptr;  // 부모 map 접근용
 
@@ -77,6 +84,7 @@ namespace NDR
 
                 // 규칙기반 Flow 감지 (  )
                 std::vector< NDR::Sensor::FlowRule::RuleObjectForSession > rules;
+				std::map<std::string,unsigned long long> RulesSequenceCycleCount; // 특정 rule의 시퀀스 전체 회전 카운트 최소1 이상값이 들어가면 "전체 성공"으로 취급.
                 void RuleDetection(const pcpp::Packet& PacketInstance, const NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection)
                 {
                     if( !rules.size() )
@@ -91,7 +99,8 @@ namespace NDR
 
                             // Stored Data - From Session Execlusive Node
                             rule.CTX,
-                            &rule.currentIndex
+                            &rule.currentIndex,
+							RulesSequenceCycleCount
                         );
                 }
 
@@ -105,8 +114,9 @@ namespace NDR
 			class NetworkSession
 			{
 			public:
-				NetworkSession(NDR::Sensor::FlowRule::FlowRuleManager& RuleManager)
-                : RuleManager(RuleManager)
+				NetworkSession(std::string PcapSavedDir, NDR::Sensor::FlowRule::FlowRuleManager& RuleManager)
+                : RuleManager(RuleManager),
+				PcapSavedDir(PcapSavedDir)
 				{
 					this->network_session_check_thread = std::thread(
                         [this]() { 
@@ -133,7 +143,8 @@ namespace NDR
 
                     bool is_Ingress,
 
-                    pcpp::Packet& PacketInstance
+                    pcpp::RawPacket& RawPacketInstance,
+					pcpp::Packet& PacketInstance
 				)
 				{
                     pcpp::TcpLayer* tcp = PacketInstance.getLayerOfType<pcpp::TcpLayer>();
@@ -173,25 +184,24 @@ namespace NDR
                     NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection = is_Ingress ? NDR::Sensor::FlowRule::RuleObject::INGRESS : NDR::Sensor::FlowRule::RuleObject::EGRESS; 
 
 					if (it_A == Session.end() && it_B == Session.end()) {
-						NetworkSessionInfo info;
 
 						std::string SessionSource =
 							Local_IP + std::to_string(Local_PORT) +
 							Remote_IP + std::to_string(Remote_PORT) +
 							std::to_string(nano_timestamp);
-                        /*
-						info.SessionID = NDR::Util::hash::sha256FromString(SessionSource);
-						info.first_seen_nanotimestamp = nano_timestamp;
-						info.last_seen_nanotimestamp = nano_timestamp;
 
-                        info.parent = this;
-                        info.self_key = SessionKey_A; // self key
 
-                        info.rules = RuleManager.Get_Rules(); // Rule Upload ( Exclusive by Session )
+						auto Rules = RuleManager.Get_Rules();
 
-                        
-						Session.emplace(SessionKey_A, info); // map에 insert*/
+						std::map<
+							std::string,
+							unsigned long long
+						> RulesSequenceCycleCount;
 
+						for (auto& rule : Rules)
+						{
+							RulesSequenceCycleCount[rule.Rule->id] = 0;
+						}
 
                         Session.emplace(
                             SessionKey_A, 
@@ -205,14 +215,21 @@ namespace NDR
                                 .parent = this,
                                 .self_key = SessionKey_A,
                                 
-                                .rules = RuleManager.Get_Rules(),
+                                .rules = Rules,
+								.RulesSequenceCycleCount = RulesSequenceCycleCount
                             }
                         );
+
+						Session[SessionKey_A].ToPcapFileSaver.Initialize(
+							PcapSavedDir,
+							Session[SessionKey_A].SessionID,
+							Session[SessionKey_A].first_seen_nanotimestamp
+						);
 
                         /*
                             Postfix 작업
                         */
-                        _post_packetsession(Session[SessionKey_A], PacketInstance, PktDirection);
+                        _post_packetsession(Session[SessionKey_A], RawPacketInstance, PacketInstance, PktDirection);
                         //std::cout << "session 생성된 - "  << info.PacketCount<< std::endl;
 						return true;
 					}
@@ -223,7 +240,7 @@ namespace NDR
                         /*
                             Postfix 작업
                         */
-                        _post_packetsession(sess, PacketInstance, PktDirection);
+                        _post_packetsession(sess, RawPacketInstance, PacketInstance, PktDirection);
                         //std::cout << "session 유지중 - " << sess.PacketCount << std::endl;
 						return true;
 					}
@@ -236,6 +253,7 @@ namespace NDR
                 }
 
 			private:
+				std::string PcapSavedDir;
                 NDR::Sensor::FlowRule::FlowRuleManager& RuleManager;
 
 				std::unordered_map<
@@ -248,10 +266,10 @@ namespace NDR
 				std::thread network_session_check_thread;
 				std::mutex mtx;
 				unsigned long long threadsleepsec = 5;
-				unsigned long long timeout = 1ULL * 100000000000;
+				unsigned long long timeout = 10ULL * 1000000000; // 10초 타임아웃 범위
 
                 // Postfix Function
-                inline bool _post_packetsession( NetworkSessionInfo& session, pcpp::Packet& PacketInstance, NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection )
+                inline bool _post_packetsession( NetworkSessionInfo& session, pcpp::RawPacket& RawPacketInstance, pcpp::Packet& PacketInstance, NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection )
                 {
                     // 0. 패킷 카운트 증가
                     if(session.PacketCount == (unsigned long long )0xFFFFFFFFFFFFFFFF)
@@ -262,7 +280,25 @@ namespace NDR
                     else
                         ++session.PacketCount;
 
-                    // 1. session이 독자적으로 가지고 있는 규칙/정책을 진행
+					// 1. pcap 파일 저장 ( 무조건 비동기 처리여야함 )
+					auto AsyncPcapSaveThread = std::thread(
+						[&session, RawPacket = RawPacketInstance.clone() ]()
+						{
+							pcpp::Packet Pkt(RawPacket);
+							
+							session.ToPcapFileSaver.AppendPacket(
+								session.last_seen_nanotimestamp, // 해당 패킷 최근 발생시간 ( 최신 )
+
+								Pkt.getRawPacket()->getRawData(),
+								Pkt.getRawPacket()->getRawDataLen(),
+
+								true // with mutex
+							);
+						}
+					);
+					AsyncPcapSaveThread.detach();
+
+                    // 2. session이 독자적으로 가지고 있는 규칙/정책을 진행
                     session.RuleDetection( PacketInstance, PktDirection );
                 }
 

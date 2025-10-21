@@ -1,0 +1,32 @@
+{
+    "id": "default-ingress-tcp-syn-scan-attempt",
+    "description": "Detects a potential TCP SYN scan attempt from an external source, identified by a SYN probe followed by a reset (RST) response, indicating a closed port.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "Syn-Probe",
+            "condition": {
+                "tcp": { "flags": ["S"] }
+            },
+            "direction": "in",
+            "goto": "Rst-Response"
+        },
+        {
+            "index": "Rst-Response",
+            "condition": {
+                "tcp": { "flags": ["R", "A"] }
+            },
+            "direction": "out",
+            "timestamp": { "nano": 5000000000 },
+            "pre": {
+                "not_complete_ids": [
+                    "default-ingress-tcp-session-established"
+                ]
+            },
+            "action": {
+                "type": "notice",
+                "message": "Potential TCP SYN scan detected (SYN -> RST sequence without session)"
+            }
+        }
+    ]
+}

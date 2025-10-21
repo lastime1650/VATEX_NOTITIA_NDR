@@ -1,0 +1,23 @@
+{
+    "id": "default-tcp-ingress-session-terminated-fin",
+    "description": "Detects a graceful TCP session termination initiated by an external host.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "FinAck-Request",
+            "condition": { "tcp": { "flags": ["F", "A"] }},
+            "direction": "in",
+            "goto": "FinAck-Response"
+        },
+        {
+            "index": "FinAck-Response",
+            "condition": { "tcp": { "flags": ["F", "A"] }},
+            "direction": "out",
+            "timestamp": { "nano": 5000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Ingress TCP session gracefully terminated (FIN)"
+            }
+        }
+    ]
+}

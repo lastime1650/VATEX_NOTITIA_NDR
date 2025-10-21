@@ -1,0 +1,23 @@
+{
+    "id": "default-ingress-tcp-fin-scan-attempt",
+    "description": "Detects a TCP FIN scan attempt from an external source. An out-of-state FIN packet is a strong indicator of stealth scanning.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "Fin-Probe",
+            "condition": {
+                "tcp": { "flags": ["F"] }
+            },
+            "direction": "in",
+            "pre": {
+                "not_complete_ids": [
+                    "default-ingress-tcp-session-established"
+                ]
+            },
+            "action": {
+                "type": "notice",
+                "message": "TCP FIN scan attempt detected (out-of-state FIN)"
+            }
+        }
+    ]
+}

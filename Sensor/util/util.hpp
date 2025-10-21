@@ -13,5 +13,6 @@
 #include "Timestamp/timestamp.hpp"
 #include "ebpf.hpp"
 #include "Hash/hash.hpp"
+#include <sys/wait.h> // WIFEXITED, WEXITSTATUS
 
 #endif

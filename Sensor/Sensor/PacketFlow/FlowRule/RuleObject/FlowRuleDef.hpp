@@ -809,7 +809,7 @@ namespace NDR
                             if (flags.has_value())
                             {
                                 bool expect_syn = false, expect_ack = false, expect_fin = false, 
-                                expect_rst = false, expect_psh = false, expect_urg = false;
+                                expect_rst = false, expect_psh = false, expect_urg = false, expect_null = false;
 
                                 for(const auto flag : flags.value())
                                 {
@@ -821,23 +821,21 @@ namespace NDR
                                         case RST: expect_rst = true; break;
                                         case PSH: expect_psh = true; break;
                                         case URG: expect_urg = true; break;
+                                        case None: expect_null = true; break;
                                     }
                                 }
 
-                                std::cout << fmt::format(R"(SYN : {},ACK : {} )", expect_syn, expect_ack) << std::endl;
 
                                 if (((bool)tcpHeader->synFlag) != expect_syn ||
                                     ((bool)tcpHeader->ackFlag) != expect_ack ||
                                     ((bool)tcpHeader->finFlag) != expect_fin ||
                                     ((bool)tcpHeader->rstFlag) != expect_rst ||
                                     ((bool)tcpHeader->pshFlag) != expect_psh ||
-                                    ((bool)tcpHeader->urgFlag) != expect_urg)
+                                    ((bool)tcpHeader->urgFlag) != expect_urg ||
+                                    ( (!(bool)tcpHeader->synFlag) && (!(bool)tcpHeader->ackFlag) && (!(bool)tcpHeader->finFlag) && (!(bool)tcpHeader->rstFlag) && (!(bool)tcpHeader->pshFlag) && (!(bool)tcpHeader->urgFlag) ) != expect_null )
                                 {
-                                    std::cout << "TCP FLAGS 실패" << std::endl;
                                     return false;
                                 }
-
-                                //tcpHeader->ackFlag
                             }
                             
                             
@@ -850,10 +848,26 @@ namespace NDR
                         static constexpr unsigned long ANY_PORT = 0xFFFFFFFF;
                         std::optional<unsigned long> destination_port, source_port;
                         std::optional<size_t> payload_size;
-                        enum TCPflagsEnum { SYN, ACK, RST, FIN, PSH, URG, ECE, CWR };
+                        enum TCPflagsEnum { SYN, ACK, RST, FIN, PSH, URG, ECE, CWR, None };
                         std::optional<std::vector<TCPflagsEnum>> flags;
 
-                        void _set_flags(const std::vector<std::string>& flags_Vector) { std::vector<TCPflagsEnum> flags_; for (auto& flag : flags_Vector) { std::string f = flag; std::transform(f.begin(), f.end(), f.begin(), ::toupper); if (f == "S" || f == "SYN") flags_.push_back(SYN); else if (f == "A" || f == "ACK") flags_.push_back(ACK); else if (f == "R" || f == "RST") flags_.push_back(RST); else if (f == "F" || f == "FIN") flags_.push_back(FIN); else if (f == "P" || f == "PSH") flags_.push_back(PSH); else if (f == "U" || f == "URG") flags_.push_back(URG); else if (f == "E" || f == "ECE") flags_.push_back(ECE); else if (f == "C" || f == "CWR") flags_.push_back(CWR); else throw std::runtime_error("Unknown TCP flag: " + flag); } flags = flags_; }
+                        void _set_flags(const std::vector<std::string>& flags_Vector) { 
+                            std::vector<TCPflagsEnum> flags_; 
+
+                            if(flags_Vector.size() == 0)
+                            {
+                                flags_ = std::vector<TCPflagsEnum>{None};
+                            }
+                            else
+                            {
+                                for (auto& flag : flags_Vector) { 
+                                    std::string f = flag; std::transform(f.begin(), f.end(), f.begin(), ::toupper); if (f == "S" || f == "SYN") flags_.push_back(SYN); else if (f == "A" || f == "ACK") flags_.push_back(ACK); else if (f == "R" || f == "RST") flags_.push_back(RST); else if (f == "F" || f == "FIN") flags_.push_back(FIN); else if (f == "P" || f == "PSH") flags_.push_back(PSH); else if (f == "U" || f == "URG") flags_.push_back(URG); else if (f == "E" || f == "ECE") flags_.push_back(ECE); else if (f == "C" || f == "CWR") flags_.push_back(CWR); else throw std::runtime_error("Unknown TCP flag: " + flag); 
+                                } 
+                            }
+
+                            
+                            flags = flags_; 
+                        }
                         void _set_source_port(const json& val) { if (val.is_string() && val.get<std::string>() == "any") source_port = ANY_PORT; else source_port = val.get<unsigned long>(); }
                         void _set_destination_port(const json& val) { if (val.is_string() && val.get<std::string>() == "any") destination_port = ANY_PORT; else destination_port = val.get<unsigned long>(); }
                         void _set_payload_size(const json& val) { if (val.is_number_unsigned()) payload_size = val.get<size_t>(); }

@@ -1,0 +1,28 @@
+{
+    "id": "default-ingress-dns-query-cycle",
+    "description": "Detects DNS query/response cycles initiated from external clients targeting internal servers.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Dns-Query",
+            "condition": {
+                "dns": { "is_response": false }
+            },
+            "direction": "in",
+            "goto": "Dns-Response"
+        },
+        {
+            "index": "Dns-Response",
+            "condition": {
+                "dns": { "is_response": true }
+            },
+            "direction": "out",
+            "timestamp": { "nano": 5000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Ingress DNS query cycle completed"
+            },
+            "goto": "Dns-Query"
+        }
+    ]
+}

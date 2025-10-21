@@ -2,7 +2,9 @@
 
 #include "../../../util/util.hpp"
 
-
+// 현재) pcap/pcap.h 와 bpf.h에서 충돌났으므로 꼭 필요한 hpp인 여기로 이동됨
+#include <bpf/bpf.h>
+#include <bpf/libbpf.h>
 
 /*
     ebpf skels 

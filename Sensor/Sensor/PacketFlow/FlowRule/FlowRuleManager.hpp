@@ -112,9 +112,6 @@ namespace NDR
                                 }
 
                                 // Rule JSON객체 저장
-                                //rules[rule_id] = NDR::Sensor::FlowRule::RuleObject::RuleObject(RULE);
-                                //rules.emplace(rule_id, NDR::Sensor::FlowRule::RuleObject::RuleObject(RULE));
-                                //rules.emplace(rule_id, RULE);
 
                                 rules.push_back(
                                     RuleObjectForSession{
@@ -131,8 +128,6 @@ namespace NDR
                                 continue;
                             }
                         }
-
-                        
 
                         return true;
                     }

@@ -17,9 +17,9 @@ namespace NDR
             class PacketFlowManager
             {
             public:
-                PacketFlowManager(std::string FlowRuleDir)
+                PacketFlowManager(std::string FlowRuleDir, std::string PcapSavedDir)
                 : RuleManager(FlowRuleDir),
-                PacketNetworkSession(RuleManager)
+                PacketNetworkSession(PcapSavedDir, RuleManager)
                 {}
 
                 ~PacketFlowManager()
@@ -77,6 +77,7 @@ namespace NDR
 
                                     PacketEvent->is_INGRESS,
 
+                                    pcppRawPacket,
                                     pcppPacket
                                 );
 

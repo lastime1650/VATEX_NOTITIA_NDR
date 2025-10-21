@@ -12,8 +12,8 @@ namespace NDR
         class Manager
         {
             public:
-                Manager(std::string FlowRuleDir)
-                : FlowManger(FlowRuleDir)
+                Manager(std::string FlowRuleDir, std::string PcapFileSavedDir)
+                : FlowManger(FlowRuleDir, PcapFileSavedDir)
                 {}
 
                 ~Manager()

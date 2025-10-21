@@ -19,8 +19,7 @@
 #include <cstdint>   // uint64_t를 위해
 #include <atomic>
 #include <fmt/core.h>
-#include <bpf/bpf.h>
-#include <bpf/libbpf.h>
+
 
 namespace NDR
 {
