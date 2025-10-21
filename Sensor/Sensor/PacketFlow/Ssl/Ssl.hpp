@@ -283,18 +283,39 @@ namespace NDR
                             system(std::string(fmt::format("ip link add {} type dummy 2>/dev/null",SSL_MIRROR_DUMMY_INTERFACE_NAME )).c_str() );
                             system(std::string(fmt::format("ip link set {} up",SSL_MIRROR_DUMMY_INTERFACE_NAME )).c_str() );
                         }
-
-                        {
-                            // SSLProxy 실행 (백그라운드형)
-                            SSL_Proxy.Run(
-                                this->CertMaker.Get_KeyPath(),
-                                this->CertMaker.Get_CrtPath()
-                            );
-                        }
                         
                     }
+
+                    bool Run()
+                    {
+                        if(is_running)
+                            return false;
+
+                        // SSLProxy 실행 (백그라운드형)
+                        is_running = SSL_Proxy.Run(
+                            this->CertMaker.Get_KeyPath(),
+                            this->CertMaker.Get_CrtPath()
+                        );
+
+                        return is_running;
+                    }
+
+                    bool Stop()
+                    {
+                        if(!is_running)
+                            return false;
+
+                        bool is_stop = SSL_Proxy.Stop();
+                        if(!is_stop)
+                            return false;
+
+                        is_running = false;
+                        return true;
+                    }
+
                     ~SSL_Manager() = default;
                 private:
+                    bool is_running = false;
                     Cert::CertCreator CertMaker;
                     SSLProxy_Manager SSL_Proxy;
 

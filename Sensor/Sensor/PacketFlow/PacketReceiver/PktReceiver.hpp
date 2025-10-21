@@ -138,6 +138,8 @@ namespace NDR
 
                         std::cout << ifname << std::endl;
 
+                        if(ifname == "SslMirrorDummy")
+
                         seen_ifnames.insert(ifname);
 
                         std::cout << "Setting up TC eBPF for interface: " << ifname << std::endl;

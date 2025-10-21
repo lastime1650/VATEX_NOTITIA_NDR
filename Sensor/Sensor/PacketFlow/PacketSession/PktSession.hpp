@@ -11,10 +11,13 @@
 
 #include <pcapplusplus/Packet.h>
 
+#include "../Payload/PktPayload.hpp"
+
 namespace NDR
 {
     namespace Sensor
     {
+		
         namespace PacketSession
         {
             namespace Network
@@ -71,11 +74,6 @@ namespace NDR
 				// To Pcap
 				NDR::Sensor::ToPcap::ToPcap ToPcapFileSaver;
 
-                // NetworkSessionPtr
-                class NetworkSession* parent = nullptr;  // 부모 map 접근용
-
-                // self key for map 
-                NetworkSessionKey self_key;
 
                 unsigned long long PacketCount = 0;
                 unsigned long long PacketCountCycle = 0; // unsigned long long 범위 초과시 ++1 
@@ -131,6 +129,7 @@ namespace NDR
 					if (network_session_check_thread.joinable())
 						network_session_check_thread.join();
 				}
+
 
 				inline bool Session_Processing(
 					unsigned long ProtocolNumber,
@@ -210,10 +209,6 @@ namespace NDR
                                 .SessionID = NDR::Util::hash::sha256FromString(SessionSource),
                                 .first_seen_nanotimestamp = nano_timestamp,
                                 .last_seen_nanotimestamp = nano_timestamp,
-
-
-                                .parent = this,
-                                .self_key = SessionKey_A,
                                 
                                 .rules = Rules,
 								.RulesSequenceCycleCount = RulesSequenceCycleCount
@@ -225,6 +220,7 @@ namespace NDR
 							Session[SessionKey_A].SessionID,
 							Session[SessionKey_A].first_seen_nanotimestamp
 						);
+						Session[SessionKey_A].ToPcapFileSaver.Run();
 
                         /*
                             Postfix 작업
@@ -280,23 +276,14 @@ namespace NDR
                     else
                         ++session.PacketCount;
 
+						
 					// 1. pcap 파일 저장 ( 무조건 비동기 처리여야함 )
-					auto AsyncPcapSaveThread = std::thread(
-						[&session, RawPacket = RawPacketInstance.clone() ]()
-						{
-							pcpp::Packet Pkt(RawPacket);
-							
-							session.ToPcapFileSaver.AppendPacket(
-								session.last_seen_nanotimestamp, // 해당 패킷 최근 발생시간 ( 최신 )
+					session.ToPcapFileSaver.AppendPacket(
+						session.last_seen_nanotimestamp, // 해당 패킷 최근 발생시간 ( 최신 )
 
-								Pkt.getRawPacket()->getRawData(),
-								Pkt.getRawPacket()->getRawDataLen(),
-
-								true // with mutex
-							);
-						}
+						RawPacketInstance.getRawData(),
+						RawPacketInstance.getRawDataLen()
 					);
-					AsyncPcapSaveThread.detach();
 
                     // 2. session이 독자적으로 가지고 있는 규칙/정책을 진행
                     session.RuleDetection( PacketInstance, PktDirection );

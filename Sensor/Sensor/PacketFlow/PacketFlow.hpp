@@ -8,6 +8,8 @@
 #include "PacketReceiver/PktReceiver.hpp"
 #include "PacketSession/PktSession.hpp"
 #include "FlowRule/FlowRuleManager.hpp"
+#include "Ssl/Ssl.hpp"
+
 namespace NDR
 {
     namespace Sensor
@@ -17,8 +19,9 @@ namespace NDR
             class PacketFlowManager
             {
             public:
-                PacketFlowManager(std::string FlowRuleDir, std::string PcapSavedDir)
+                PacketFlowManager(std::string FlowRuleDir, std::string PcapSavedDir, std::string CertsDir)
                 : RuleManager(FlowRuleDir),
+                SSL_Manager(CertsDir),
                 PacketNetworkSession(PcapSavedDir, RuleManager)
                 {}
 
@@ -31,7 +34,12 @@ namespace NDR
                 {
                     if(is_running)
                         return false;
+                    
+                    // SSL Proxy Open
+                    if( !SSL_Manager.Run() )
+                        return false;
 
+                    // Ebpf Packet Receive Open
                     if( !Receiver.Run( &PktInfoQueue) ) // 큐 객체 관리는 오로지 "PacketFlowManager" 에서 담당 
                         return false;
 
@@ -83,6 +91,10 @@ namespace NDR
 
                                 delete[] PktInfo.PacketEvent;
                             }
+                            while(!this->PktInfoQueue.empty())
+                            {
+                                delete[] this->PktInfoQueue.get().PacketEvent;
+                            }
                         }
                     );
 
@@ -91,12 +103,27 @@ namespace NDR
 
                 bool Stop()
                 {
-                    return Receiver.Stop();
+                    if(!is_running)
+                        return false;
+
+                    // Ebpf Receive Closing
+                    if( !Receiver.Stop() )
+                        return false;
+
+                    // SSL Proxy Closing
+                    if( !SSL_Manager.Stop() )
+                        return false;
+
+                    is_running = false;
+                    return true;
                 }
 
 
             private:
+                NDR::Sensor::SSL::SSL_Manager SSL_Manager;
                 NDR::Sensor::PacketRecevier::Receiver Receiver; 
+
+
                 NDR::Util::Queue::Queue<NDR::Util::eBPF::QueueStruct::EbpfPacketQueueStruct> PktInfoQueue;
 
                 bool is_running = false;

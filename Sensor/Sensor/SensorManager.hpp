@@ -5,6 +5,7 @@
 
 #include "PacketFlow/PacketFlow.hpp"
 
+
 namespace NDR
 {
     namespace Sensor
@@ -12,8 +13,8 @@ namespace NDR
         class Manager
         {
             public:
-                Manager(std::string FlowRuleDir, std::string PcapFileSavedDir)
-                : FlowManger(FlowRuleDir, PcapFileSavedDir)
+                Manager(std::string FlowRuleDir, std::string PcapFileSavedDir, std::string CertsDir)
+                : FlowManger(FlowRuleDir, PcapFileSavedDir, CertsDir)
                 {}
 
                 ~Manager()
