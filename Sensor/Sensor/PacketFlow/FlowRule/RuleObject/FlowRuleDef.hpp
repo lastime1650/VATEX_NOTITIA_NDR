@@ -917,21 +917,25 @@ namespace NDR
                                 else if (k == "dst_ip") dst_ip = v.get<std::string>();
                                 else if (k == "ttl") ttl = v.get<unsigned int>();
                                 else if (k == "protocol") protocol = v.get<unsigned int>();
+                                else if (k == "is_fragment") protocol = v.get<bool>();
                             }
                         }
                         bool Match(const pcpp::Packet& pkt) override
                         {
                             pcpp::IPv4Layer* ip = pkt.getLayerOfType<pcpp::IPv4Layer>();
+                            
                             if (!ip) return false;
-                            if (src_ip && ip->getSrcIPAddress().toString() != *src_ip) return false;
-                            if (dst_ip && ip->getDstIPAddress().toString() != *dst_ip) return false;
-                            if (ttl && ip->getIPv4Header()->timeToLive != *ttl) return false;
-                            if (protocol && ip->getIPv4Header()->protocol != *protocol) return false;
+                            if (src_ip.has_value() && ip->getSrcIPAddress().toString() != *src_ip) return false;
+                            if (dst_ip.has_value() && ip->getDstIPAddress().toString() != *dst_ip) return false;
+                            if (ttl.has_value() && ip->getIPv4Header()->timeToLive != *ttl) return false;
+                            if (protocol.has_value() && ip->getIPv4Header()->protocol != *protocol) return false;
+                            if (is_fragment.has_value() && ip->isFragment() != is_fragment.value()) return false;
                             return true;
                         }
                     private:
                         std::optional<std::string> src_ip, dst_ip;
                         std::optional<unsigned int> ttl, protocol;
+                        std::optional<bool> is_fragment;
                     };
 
                     /*

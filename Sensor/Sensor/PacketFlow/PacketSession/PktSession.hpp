@@ -87,6 +87,7 @@ namespace NDR
 				std::map<std::string,unsigned long long> RulesSequenceCycleCount; // 특정 rule의 시퀀스 전체 회전 카운트 최소1 이상값이 들어가면 "전체 성공"으로 취급.
                 void RuleDetection(const pcpp::Packet& PacketInstance, const NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection)
                 {
+					// Queue 기반 Rule로 변경하라. (규칙이 많을수록 지연이 늘어남..)
                     if( !rules.size() )
                         return;
                     

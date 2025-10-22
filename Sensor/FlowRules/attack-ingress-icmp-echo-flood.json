@@ -1,0 +1,19 @@
+{
+    "id": "attack-ingress-icmp-echo-flood",
+    "description": "Detects a high rate of ICMP Echo Request packets (Ping Flood).",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "Ping-Flood",
+            "direction": "in",
+            "condition": { "icmp": { "type": 8 } },
+            "timestamp": { "nano": 1000000000 },
+            "threshold": { "pktcount": 300 },
+            "goto": "Ping-Flood",
+            "action": {
+                "type": "notice",
+                "message": "ICMP Echo Request Flood (Ping Flood) detected: Over 300 pings received in 1 second for a single session."
+            }
+        }
+    ]
+}

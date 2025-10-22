@@ -219,6 +219,9 @@ namespace NDR
                     ~RuleObject() = default;
                     
                     bool Match(
+
+                        // Queue 기반 Rule로 변경하라. (규칙이 많을수록 지연이 늘어남..)
+                        
                         // Session Info
                         const std::string& SessionID,
 

@@ -1,0 +1,23 @@
+{
+    "id": "attack-ingress-ip-fragmentation-flood",
+    "description": "Detects an abnormally high rate of IP fragment packets, indicative of an IP fragmentation DoS attack.",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "Fragment-Flood",
+            "direction": "in",
+            "condition": {
+                "ip": {
+                    "is_fragment": true
+                }
+            },
+            "timestamp": { "nano": 1000000000 },
+            "threshold": { "pktcount": 500 },
+            "goto": "Fragment-Flood",
+            "action": {
+                "type": "notice",
+                "message": "IP Fragmentation Flood detected: Over 500 fragment packets received in 1 second for a single session."
+            }
+        }
+    ]
+}
