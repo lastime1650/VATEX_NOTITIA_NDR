@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-tcp-port-80-http",
+    "description": "Detects an inbound HTTP request to an internal web server on TCP port 80.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "tcp": { "dst_port": 80 } },
+            "action": { "type": "notice", "message": "Ingress HTTP traffic detected to internal web server on TCP port 80." }
+        }
+    ]
+}
