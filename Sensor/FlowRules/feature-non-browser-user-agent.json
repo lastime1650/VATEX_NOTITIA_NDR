@@ -1,0 +1,19 @@
+{
+    "id": "feature-non-browser-user-agent",
+    "description": "Detects non-browser User-Agents like curl, wget, or Python, often used in automated scripts.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "tcp": { "dst_port": 80 },
+                "payload": [
+                    {
+                        "regex": "User-Agent:.*(curl|wget|python-urllib|Go-http-client)"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Non-browser User-Agent (curl, wget, Python, etc.) detected in HTTP traffic." }
+        }
+    ]
+}

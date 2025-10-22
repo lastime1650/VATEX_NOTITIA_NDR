@@ -13,8 +13,15 @@ namespace NDR
         class Manager
         {
             public:
-                Manager(std::string FlowRuleDir, std::string PcapFileSavedDir, std::string CertsDir)
-                : FlowManger(FlowRuleDir, PcapFileSavedDir, CertsDir)
+                Manager(
+                    std::string KafkaIp,
+                    unsigned long Kafkaport,
+                    std::string Kafkatopic,
+
+                    std::string FlowRuleDir, std::string PcapFileSavedDir, std::string CertsDir
+                )
+                : KafkaProducer(KafkaIp, Kafkaport, Kafkatopic),
+                FlowManger(KafkaProducer, FlowRuleDir, PcapFileSavedDir, CertsDir)
                 {}
 
                 ~Manager()
@@ -51,6 +58,7 @@ namespace NDR
 
 
             private:
+                NDR::Util::Kafka::Kafka KafkaProducer;
                 NDR::Sensor::PacketFlow::PacketFlowManager FlowManger;
 
                 bool is_running = false;

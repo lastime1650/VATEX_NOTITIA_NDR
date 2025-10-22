@@ -31,8 +31,9 @@ namespace NDR
             class FlowRuleManager
             {
                 public:
-                    FlowRuleManager(std::string RuleDir)
-                    :RuleDir(RuleDir)
+                    FlowRuleManager(NDR::Util::Kafka::Kafka& KafkaProducer, std::string RuleDir)
+                    : KafkaProducer(KafkaProducer),
+                    RuleDir(RuleDir)
                     {
                         if( !this->Reload_Rules() )
                             std::cout << "NoneRules at Init" << std::endl;
@@ -55,6 +56,8 @@ namespace NDR
                     NDR::Util::File::FileHandler FileHandle;
 
                     std::vector< RuleObjectForSession > rules;
+
+                    NDR::Util::Kafka::Kafka& KafkaProducer;
 
 
                     bool _get_rule_file_paths(std::vector<std::filesystem::path>& output)
@@ -115,7 +118,7 @@ namespace NDR
 
                                 rules.push_back(
                                     RuleObjectForSession{
-                                        .Rule = std::make_shared< NDR::Sensor::FlowRule::RuleObject::RuleObject >(RULE),
+                                        .Rule = std::make_shared< NDR::Sensor::FlowRule::RuleObject::RuleObject >(KafkaProducer, RULE),
                                         .currentIndex = 0
                                     }
                                     //std::make_shared< NDR::Sensor::FlowRule::RuleObject::RuleObject >(RULE)

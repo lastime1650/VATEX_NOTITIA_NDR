@@ -7,14 +7,17 @@ int main()
 {
     
     NDR::Sensor::Manager Sensor(
-        //"./FlowRules"
+        "192.168.1.205", 
+        29092, 
+        "ndr_sensor",
+
         "./_testrule",
         "./Pcaps",
         "./Certs"
     );
     Sensor.Run();
-    
-    std::this_thread::sleep_for(std::chrono::seconds(9999));
 
+    std::this_thread::sleep_for(std::chrono::seconds(9999));
+    
     return 0;
 }

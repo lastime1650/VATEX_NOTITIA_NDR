@@ -171,72 +171,37 @@ namespace NDR
                     {
                         ProtocolKey::PAYLOAD,
                         {
-                            /*
-                            {
-                                "payload" : [
-                                    {
-                                        "size": 1234, 바이트
-                                        "size_match_method": "==" 또는 ">" 또는 "<" 또는 ">=" 또는 "<=" 또는 "!=",
-                                        "binary": ff1144.. 2자리형 헥스문자열,
-                                        "offset" : 0, "offset" 키가 있다면 ,해당 값(정수)을 매치 시작점. "offset"이 없다면 contains로 진행
-                                    },,
-                                ]
-                            }
-                            */
                            /*
                                 A - 사용예시 (페이로드 크기가 500바이트보다 크고, "evil" 문자열(hex: 6576696c)을 포함하는 패킷)
                                 "payload": [
-                                    {
-                                        "size": 500,
-                                        "size_match_method": ">"
-                                    },
-                                    {
-                                        "binary": "6576696c"
-                                    }
+                                    { "size": 500, "size_match_method": ">" },
+                                    { "binary": "6576696c" }
                                 ]
 
                                 B - 사용예시 (페이로드 크기가 64바이트가 아니고, 오프셋 8에서 1A2B3C 패턴이 나타나는 패킷)
                                 "payload": [
-                                    {
-                                        "size": 64,
-                                        "size_match_method": "!="
-                                    },
-                                    {
-                                        "binary": "1A2B3C",
-                                        "offset": 8
-                                    }
+                                    { "size": 64, "size_match_method": "!=" },
+                                    { "binary": "1A2B3C", "offset": 8 }
                                 ]
+                                
+                                C - 사용예시 (페이로드에 "powershell" 문자열이 포함된 패킷)
+                                "payload": [ { "string": "powershell" } ]
 
-                                C - 사용예시 (리눅스 명령어 매치)
+                                D - 사용예시 (리눅스 명령어 매치)
+                                "payload": [ { "regex": "(ls|cat|rm|cp|wget|curl)\\s+-[a-zA-Z0-9]" } ]
+
+                                E - 사용예시 (인젝션 매치)
                                 "payload": [
-                                    {
-                                        "regex": "(ls|cat|rm|cp|wget|curl)\\s+-[a-zA-Z0-9]"
-                                    }
-                                ]
-
-                                D - 사용예시 (인젝션 매치)
-
-                                "payload": [
-                                    {
-                                        "size": 100,
-                                        "size_match_method": ">="
-                                    },
-                                    {
-                                        "regex": "('|\"|;|--|\\/\\*).*?(UNION|SELECT|INSERT|UPDATE|DELETE)"
-                                    }
+                                    { "size": 100, "size_match_method": ">=" },
+                                    { "regex": "('|\"|;|--|\\/\\*).*?(UNION|SELECT|INSERT|UPDATE|DELETE)" }
                                 ]
                            */
-                            "size",             // 바이너리 사이즈 예시) { "size",  }
-                            "match_method", 
-                            "binary",      // 바이너리 매치 예시) {"binary_match": {"binary": "54F2"(2자리-hex형), "offset": 0(맨 앞에서부터 진행. "offset이 없다면 Contains형식으로 진행.") }}
+                            "size",
+                            "size_match_method", 
+                            "binary",
                             "offset",
-                            "string", // 문자열 기반 매치
-                            "regex" // regex 패턴 매치
-
-                            /*
-                                * binary , string , regex는 배열내 요소에서 한 JSON내 3개 동시에 적용되지 아니하며, 
-                                * binary > string > regex 우선순위로, 1개만 배치된다.
-                            */
+                            "string",
+                            "regex"
                         }
                     }
                 };
@@ -252,7 +217,7 @@ namespace NDR
                     };
 
                     /*
-                        PAYLOAD (None-Parsed L4+ Data) - Supports "binary" (hex) and "string" (plain text)
+                        PAYLOAD (None-Parsed L4+ Data) - Supports "binary", "string", and "regex"
                     */
                     class ConditionPayloadObject : public ConditionObjectBase
                     {
@@ -263,8 +228,7 @@ namespace NDR
                             std::optional<size_t> size;
                             SizeMatchMethod method = SizeMatchMethod::EQ;
                             std::optional<std::vector<uint8_t>> binary_pattern;
-                            std::optional<std::regex> regex_pattern;            // "regex" 전용
-
+                            std::optional<std::regex> regex_pattern;
                             std::optional<size_t> offset;
                         };
 
@@ -278,7 +242,6 @@ namespace NDR
                                 std::cerr << "[ERROR] Payload condition must be an array of objects." << std::endl;
                                 return;
                             }
-
                             for (const auto& cond_item : payloadCond)
                             {
                                 if (!cond_item.is_object()) continue;
@@ -302,9 +265,7 @@ namespace NDR
                                     }
                                 }
 
-                                // ==================== [수정된 부분 시작] ====================
-                                // 2. binary (hex) 또는 string (plain text) 파싱
-                                // "binary" 키를 우선적으로 처리합니다. ->  (binary > string > regex 우선순위)
+                                // 2. 콘텐츠 매칭 키 파싱 (binary > string > regex 우선순위)
                                 if (cond_item.contains("binary") && cond_item["binary"].is_string())
                                 {
                                     p_cond.binary_pattern = hex_string_to_bytes(cond_item["binary"].get<std::string>());
@@ -312,20 +273,17 @@ namespace NDR
                                 else if (cond_item.contains("string") && cond_item["string"].is_string())
                                 {
                                     std::string str_pattern = cond_item["string"].get<std::string>();
-                                    // std::string을 std::vector<uint8_t>로 변환합니다.
                                     p_cond.binary_pattern.emplace(str_pattern.begin(), str_pattern.end());
                                 }
                                 else if (cond_item.contains("regex") && cond_item["regex"].is_string())
                                 {
                                     try {
-                                        // 정규표현식을 컴파일하여 저장. 예외 발생 시 처리
                                         p_cond.regex_pattern.emplace(cond_item["regex"].get<std::string>());
                                     } catch (const std::regex_error& e) {
                                         std::cerr << "[ERROR] Invalid regex pattern: '" << cond_item["regex"].get<std::string>()
                                                 << "'. Error: " << e.what() << std::endl;
                                     }
                                 }
-                                // ==================== [수정된 부분 끝] ======================
 
                                 // 3. offset 파싱
                                 if (cond_item.contains("offset") && cond_item["offset"].is_number())
@@ -339,7 +297,7 @@ namespace NDR
 
                         bool Match(const pcpp::Packet& pkt) override
                         {
-                            // 페이로드 탐색 및 매칭 로직은 이전과 동일합니다.
+                            
                             const uint8_t* payload_data = nullptr;
                             size_t payload_len = 0;
                             pcpp::Layer* payloadContainer = pkt.getLayerOfType<pcpp::TcpLayer>() ? pkt.getLayerOfType<pcpp::TcpLayer>() :
@@ -348,15 +306,13 @@ namespace NDR
                                                         pkt.getLayerOfType<pcpp::IPv6Layer>() ? pkt.getLayerOfType<pcpp::IPv6Layer>() :
                                                         static_cast<pcpp::Layer*>(pkt.getLayerOfType<pcpp::IPv4Layer>());
                             if (payloadContainer) {
+                                
                                 payload_data = payloadContainer->getLayerPayload();
                                 payload_len = payloadContainer->getLayerPayloadSize();
                             }
                             
                             for (const auto& p_cond : conditions)
                             {
-                                 const uint8_t* search_start = payload_data;
-                                size_t search_len = payload_len;
-
                                 if (p_cond.size.has_value())
                                 {
                                     bool size_ok = false;
@@ -372,37 +328,49 @@ namespace NDR
                                     if (!size_ok) return false;
                                 }
 
+                                // [FIX] Offset logic moved here to apply to both binary and regex matching
+                                const uint8_t* search_start = payload_data;
+                                size_t search_len = payload_len;
+
+                                if (p_cond.offset.has_value())
+                                {
+                                    size_t offset = p_cond.offset.value();
+                                    if (offset >= payload_len) return false; // Offset is out of bounds
+                                    search_start += offset;
+                                    search_len -= offset;
+                                }
+
                                 if (p_cond.binary_pattern.has_value())
                                 {
-                                    // binary 또는 string 포함
+                                    if (payloadContainer->getProtocol() == 4)
+                                    {   
+                                        pcpp::TcpLayer* tcp = (pcpp::TcpLayer*)payloadContainer;
+                                        if( ntohs(tcp->getTcpHeader()->portDst) == 53 )
+                                        {
+                                            std::cout << "\nTELNET ~!!!!@!@!@!@!@!!@V\n" << std::string(p_cond.binary_pattern.value().begin(), p_cond.binary_pattern.value().end() ) << std::endl;
+                                        }
+
+                                    }
                                     const auto& pattern = p_cond.binary_pattern.value();
-                                    if (pattern.empty() || payload_len == 0) return false;
+                                    if (pattern.empty() || search_len == 0 || pattern.size() > search_len) return false;
 
                                     if (p_cond.offset.has_value())
                                     {
-                                        size_t offset = p_cond.offset.value();
-                                        if (offset + pattern.size() > payload_len) return false;
-                                        if (std::memcmp(payload_data + offset, pattern.data(), pattern.size()) != 0) return false;
+                                        if (std::memcmp(search_start, pattern.data(), pattern.size()) != 0) return false;
                                     }
                                     else
                                     {
-                                        if (pattern.size() > payload_len) return false;
-                                        auto it = std::search(payload_data, payload_data + payload_len, pattern.begin(), pattern.end());
-                                        if (it == (payload_data + payload_len)) return false;
+                                        auto it = std::search(search_start, search_start + search_len, pattern.begin(), pattern.end());
+                                        if (it == (search_start + search_len)) return false;
                                     }
                                 }
                                 else if (p_cond.regex_pattern.has_value())
                                 {
-                                    // regex 전용
                                     if (search_len == 0) return false;
                                     
-                                    // std::regex_search는 이터레이터를 받으므로, null 종료 문자 없이도 안전하게 동작
                                     if (!std::regex_search(
-                                            // 문자열 범위
                                             reinterpret_cast<const char*>(search_start),
                                             reinterpret_cast<const char*>(search_start + search_len),
-
-                                            // 패턴 삽입
                                             p_cond.regex_pattern.value()))
                                     {
                                         return false;
@@ -658,7 +626,6 @@ namespace NDR
 
                             if (pcpp::SSLClientHelloMessage* clientHello = dynamic_cast<pcpp::SSLClientHelloMessage*>(msg))
                             {
-                                // [FIX] getHandshakeVersion()은 SSLVersion 객체를 반환. 이 객체의 toString() 사용
                                 if (version.has_value())
                                 {
                                     pcpp::SSLVersion versionObj = clientHello->getHandshakeVersion();
@@ -666,7 +633,6 @@ namespace NDR
                                         return false;
                                 }
                                 
-                                // [FIX] Cipher Suite 이름은 ID를 얻은 후 static 메서드로 변환
                                 if (cipher_suites.has_value())
                                 {
                                     for (const auto& rule_suite_name : cipher_suites.value())
@@ -677,7 +643,6 @@ namespace NDR
                                             pcpp::SSLCipherSuite* pkt_suite = clientHello->getCipherSuite(j);
                                             if (pkt_suite)
                                             {
-                                                
                                                 std::string suiteName = pkt_suite->asString();
                                                 if (iequals(suiteName, rule_suite_name))
                                                 {
@@ -694,7 +659,6 @@ namespace NDR
 
                             if (pcpp::SSLServerHelloMessage* serverHello = dynamic_cast<pcpp::SSLServerHelloMessage*>(msg))
                             {
-                                // [FIX] getHandshakeVersion()은 SSLVersion 객체를 반환. 이 객체의 toString() 사용
                                 if (version.has_value())
                                 {
                                     pcpp::SSLVersion versionObj = serverHello->getHandshakeVersion();
@@ -702,7 +666,6 @@ namespace NDR
                                         return false;
                                 }
                                 
-                                // [FIX] Cipher Suite 이름은 ID를 얻은 후 static 메서드로 변환
                                 if (cipher_suites.has_value())
                                 {
                                     pcpp::SSLCipherSuite* chosenSuite = serverHello->getCipherSuite();
@@ -1064,13 +1027,12 @@ namespace NDR
                             if (source_port.has_value() && source_port.value() != ANY_PORT && ntohs(tcpHeader->portSrc) != source_port.value()) return false;
                             if (destination_port.has_value() && destination_port.value() != ANY_PORT && ntohs(tcpHeader->portDst) != destination_port.value()) return false;
 
-                            // flag 매치
                             if (flags.has_value())
                             {
                                 bool expect_syn = false, expect_ack = false, expect_fin = false, 
                                 expect_rst = false, expect_psh = false, expect_urg = false, expect_null = false;
 
-                                for(const auto flag : flags.value())
+                                for(const auto& flag : flags.value())
                                 {
                                     switch (flag)
                                     {
@@ -1081,9 +1043,9 @@ namespace NDR
                                         case PSH: expect_psh = true; break;
                                         case URG: expect_urg = true; break;
                                         case None: expect_null = true; break;
+                                        default: break; // [IMPROVEMENT] ECE, CWR are ignored for matching
                                     }
                                 }
-
 
                                 if (((bool)tcpHeader->synFlag) != expect_syn ||
                                     ((bool)tcpHeader->ackFlag) != expect_ack ||
@@ -1091,12 +1053,11 @@ namespace NDR
                                     ((bool)tcpHeader->rstFlag) != expect_rst ||
                                     ((bool)tcpHeader->pshFlag) != expect_psh ||
                                     ((bool)tcpHeader->urgFlag) != expect_urg ||
-                                    ( (!(bool)tcpHeader->synFlag) && (!(bool)tcpHeader->ackFlag) && (!(bool)tcpHeader->finFlag) && (!(bool)tcpHeader->rstFlag) && (!(bool)tcpHeader->pshFlag) && (!(bool)tcpHeader->urgFlag) ) != expect_null )
+                                    ( !tcpHeader->synFlag && !tcpHeader->ackFlag && !tcpHeader->finFlag && !tcpHeader->rstFlag && !tcpHeader->pshFlag && !tcpHeader->urgFlag ) != expect_null )
                                 {
                                     return false;
                                 }
                             }
-                            
                             
                             if (payload_size.has_value() && tcpLayer->getLayerPayloadSize() != payload_size.value()) return false;
 
@@ -1112,25 +1073,31 @@ namespace NDR
 
                         void _set_flags(const std::vector<std::string>& flags_Vector) { 
                             std::vector<TCPflagsEnum> flags_; 
-
-                            if(flags_Vector.size() == 0)
+                            // [IMPROVEMENT] Use .empty() for clarity
+                            if(flags_Vector.empty())
                             {
-                                flags_ = std::vector<TCPflagsEnum>{None};
+                                flags_.push_back(None);
                             }
                             else
                             {
                                 for (auto& flag : flags_Vector) { 
-                                    std::string f = flag; std::transform(f.begin(), f.end(), f.begin(), ::toupper); if (f == "S" || f == "SYN") flags_.push_back(SYN); else if (f == "A" || f == "ACK") flags_.push_back(ACK); else if (f == "R" || f == "RST") flags_.push_back(RST); else if (f == "F" || f == "FIN") flags_.push_back(FIN); else if (f == "P" || f == "PSH") flags_.push_back(PSH); else if (f == "U" || f == "URG") flags_.push_back(URG); else if (f == "E" || f == "ECE") flags_.push_back(ECE); else if (f == "C" || f == "CWR") flags_.push_back(CWR); else throw std::runtime_error("Unknown TCP flag: " + flag); 
+                                    std::string f = flag; std::transform(f.begin(), f.end(), f.begin(), ::toupper); 
+                                    if (f == "S" || f == "SYN") flags_.push_back(SYN); 
+                                    else if (f == "A" || f == "ACK") flags_.push_back(ACK); 
+                                    else if (f == "R" || f == "RST") flags_.push_back(RST); 
+                                    else if (f == "F" || f == "FIN") flags_.push_back(FIN); 
+                                    else if (f == "P" || f == "PSH") flags_.push_back(PSH); 
+                                    else if (f == "U" || f == "URG") flags_.push_back(URG); 
+                                    else if (f == "E" || f == "ECE") flags_.push_back(ECE); 
+                                    else if (f == "C" || f == "CWR") flags_.push_back(CWR); 
+                                    else throw std::runtime_error("Unknown TCP flag: " + flag); 
                                 } 
                             }
-
-                            
                             flags = flags_; 
                         }
                         void _set_source_port(const json& val) { if (val.is_string() && val.get<std::string>() == "any") source_port = ANY_PORT; else source_port = val.get<unsigned long>(); }
                         void _set_destination_port(const json& val) { if (val.is_string() && val.get<std::string>() == "any") destination_port = ANY_PORT; else destination_port = val.get<unsigned long>(); }
                         void _set_payload_size(const json& val) { if (val.is_number_unsigned()) payload_size = val.get<size_t>(); }
-                        bool _check_flag(pcpp::tcphdr* tcpHeader, TCPflagsEnum flag) { switch (flag) { case SYN: return tcpHeader->synFlag; case ACK: return tcpHeader->ackFlag; case RST: return tcpHeader->rstFlag; case FIN: return tcpHeader->finFlag; case PSH: return tcpHeader->pshFlag; case URG: return tcpHeader->urgFlag; case ECE: return tcpHeader->eceFlag; case CWR: return tcpHeader->cwrFlag; default: return false; } }
                     };
                 }
                 
@@ -1163,6 +1130,8 @@ namespace NDR
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionUDPObject>(condObj));
                                 else if (protocol == ProtocolKey::TLS)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionTLSObject>(condObj));
+                                else if (protocol == ProtocolKey::PAYLOAD)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionPayloadObject>(condObj));
                                 else
                                 {
                                     std::cerr << "[ERROR] Unsupported protocol condition: " << protocol << std::endl;
@@ -1180,10 +1149,14 @@ namespace NDR
 
                     bool Match(const pcpp::Packet& pkt)
                     {
+                        // [FIX] An empty condition should not match anything.
+                        if (conditions.empty()) return false; 
+                        
                         for (const auto& condition : conditions)
                         {
                             if (!condition->Match(pkt))
                                 return false;
+                            
                         }
                         return true;
                     }

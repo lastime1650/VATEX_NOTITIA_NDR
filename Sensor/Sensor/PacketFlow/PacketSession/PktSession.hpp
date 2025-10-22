@@ -92,10 +92,12 @@ namespace NDR
                     
                     for(auto& rule : rules)
                         rule.Rule->Match(
+							SessionID,
+
                             // Live Data - From Session Execlusive Node
                             PacketInstance, 
                             PktDirection, 
-                            
+                            last_seen_nanotimestamp,
 
                             // Stored Data - From Session Execlusive Node
                             rule.CTX,
@@ -151,7 +153,7 @@ namespace NDR
                     pcpp::TcpLayer* tcp = PacketInstance.getLayerOfType<pcpp::TcpLayer>();
                     if( tcp )
                     {
-                        if (Local_IP == "8.8.8.8" || Remote_IP == "8.8.8.8")
+                        if (Local_IP == "8.8.8.8" || Remote_IP == "8.8.8.8" || Local_PORT == 23 || Remote_PORT == 23)
                         {
                             auto* header = tcp->getTcpHeader();
                             std::cout << fmt::format("{}:{} -> {}:{} / SYN: {} ACK:{}", Local_IP, Local_PORT, Remote_IP, Remote_PORT, (unsigned long)(header->synFlag), (unsigned long)(header->ackFlag)) << std::endl;
@@ -184,13 +186,14 @@ namespace NDR
 
                     NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection = is_Ingress ? NDR::Sensor::FlowRule::RuleObject::INGRESS : NDR::Sensor::FlowRule::RuleObject::EGRESS; 
 
+
+
 					if (it_A == Session.end() && it_B == Session.end()) {
 
 						std::string SessionSource =
 							Local_IP + std::to_string(Local_PORT) +
 							Remote_IP + std::to_string(Remote_PORT) +
 							std::to_string(nano_timestamp);
-
 
 						auto Rules = RuleManager.Get_Rules();
 
@@ -281,42 +284,45 @@ namespace NDR
 
 						
 					// 1. pcap 파일 저장 ( 무조건 비동기 처리여야함 )
+					/*
 					session.ToPcapFileSaver.AppendPacket(
 						session.last_seen_nanotimestamp, // 해당 패킷 최근 발생시간 ( 최신 )
 
 						RawPacketInstance.getRawData(),
 						RawPacketInstance.getRawDataLen()
-					);
+					);*/
 
                     // 2. session이 독자적으로 가지고 있는 규칙/정책을 진행
                     session.RuleDetection( PacketInstance, PktDirection );
-
-					// 3. 
 					
                 }
 
 				void SessionLoopChecker()
 				{
+					return;
 					while (!stop_thread)
 					{
 						std::this_thread::sleep_for(std::chrono::seconds(threadsleepsec));
 
 						unsigned long long now_nanotimestamp = NDR::Util::timestamp::Get_Real_Timestamp();
 
-						std::lock_guard<std::mutex> lock(mtx);
-
-						for (auto it = Session.begin(); it != Session.end(); )
 						{
-							NetworkSessionInfo& value = it->second;
+							std::lock_guard<std::mutex> lock(mtx);
 
-							if (now_nanotimestamp > (value.last_seen_nanotimestamp + timeout))
-								{
-                                    it = Session.erase(it);
-                                    //std::cout << "timeout! || " << fmt::format("{}:{} -> {}:{}", value.self_key.Local_IP, value.self_key.Local_PORT, value.self_key.Remote_IP, value.self_key.Remote_PORT) << std::endl;
-                                }
-							else
-								++it;
+							for (auto it = Session.begin(); it != Session.end(); )
+							{
+								NetworkSessionInfo& value = it->second;
+
+								if (now_nanotimestamp > (value.last_seen_nanotimestamp + timeout))
+									{
+										it = Session.erase(it);
+										//std::cout << "timeout! || " << fmt::format("{}:{} -> {}:{}", value.self_key.Local_IP, value.self_key.Local_PORT, value.self_key.Remote_IP, value.self_key.Remote_PORT) << std::endl;
+									}
+								else
+									++it;
+							}
 						}
+						
 					}
 				}
 			};

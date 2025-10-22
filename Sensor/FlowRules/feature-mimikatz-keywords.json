@@ -1,0 +1,18 @@
+{
+    "id": "feature-mimikatz-keywords",
+    "description": "Detects keywords related to the Mimikatz credential dumping tool.",
+    "severity": "critical",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "mimikatz|sekurlsa::logonpasswords|lsadump::sam"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Mimikatz-related keywords detected in payload." }
+        }
+    ]
+}

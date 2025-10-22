@@ -1,0 +1,19 @@
+{
+    "id": "feature-ldap-user-enumeration-pattern",
+    "description": "Detects LDAP queries for 'samaccountname', often used for user enumeration.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "tcp": { "dst_port": 389 },
+                "payload": [
+                    {
+                        "string": "samaccountname"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Potential Active Directory user enumeration pattern ('samaccountname') detected over LDAP." }
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "id": "feature-windows-recon-commands",
+    "description": "Detects common Windows reconnaissance commands in a payload.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "\\b(whoami|ipconfig /all|net user|systeminfo|tasklist)\\b"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Windows reconnaissance commands (e.g., 'whoami', 'ipconfig') detected." }
+        }
+    ]
+}

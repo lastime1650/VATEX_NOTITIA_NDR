@@ -1,0 +1,19 @@
+{
+    "id": "feature-bash-script-header",
+    "description": "Detects the presence of a Bash script header ('shebang') in a payload.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "string": "#!/bin/bash",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Bash script header ('#!/bin/bash') detected in payload." }
+        }
+    ]
+}

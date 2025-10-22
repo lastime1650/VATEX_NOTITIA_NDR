@@ -41,6 +41,8 @@
                     public:
                         ToPcap() = default;
                         ~ToPcap(){
+                            Stop();
+                            ToPcapLoopThread.reset();
                             ToPcapQueue.reset();
                         }
 
@@ -79,7 +81,7 @@
                             
                             is_running = true;
 
-                            std::thread(
+                            ToPcapLoopThread = std::make_shared<std::thread>(
                                 [this]()
                                 {
                                     while(this->is_running)
@@ -118,7 +120,7 @@
                                         this->ToPcapQueue.get();
 
                                 }
-                            ).detach();
+                            );
 
                             return true;
                         }
@@ -128,6 +130,10 @@
                                 return false;
 
                             is_running = false;
+
+                            if(ToPcapLoopThread->joinable())
+                                ToPcapLoopThread->join();
+                            
                                 
                             return true;
                         }
@@ -151,10 +157,10 @@
                         NDR::Util::File::FileHandler FileHandlerInstance;
 
                         bool is_running = false;
-                        //std::thread ToPcapLoopThread;
+                        std::shared_ptr< std::thread > ToPcapLoopThread;
 
                         std::shared_ptr< NDR::Util::Queue::Queue<ToPcapQueueData> > ToPcapQueue = std::make_shared<NDR::Util::Queue::Queue<ToPcapQueueData>>();
-
+                        
 
 
                 };

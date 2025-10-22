@@ -28,7 +28,7 @@ namespace NDR
                 CTX.PacketEvent = new unsigned char[data_sz]; // 해제는 큐 수신부가 ...
                 memcpy(CTX.PacketEvent, (unsigned char*)data, data_sz); 
                 CTX.timestamp = NDR::Util::timestamp::Get_Real_Timestamp();
-
+                
                 queue->putRaw(&CTX);
             }
         }

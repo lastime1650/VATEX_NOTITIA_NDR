@@ -83,7 +83,9 @@ namespace NDR
                     std::vector<RuleSequence> sequence;
 
 
-                    RuleObject(json RuleJson){
+                    RuleObject(NDR::Util::Kafka::Kafka& KafkaProducer, json RuleJson)
+                    :KafkaProducer(KafkaProducer)
+                    {
                         id = RuleJson.value("id", "");
                         description = RuleJson.value("description", "");
 
@@ -217,9 +219,13 @@ namespace NDR
                     ~RuleObject() = default;
                     
                     bool Match(
+                        // Session Info
+                        const std::string& SessionID,
+
                         // Live Data - From Session Execlusive Node
                         const pcpp::Packet& pkt,
                         const RuleDirection direction,
+                        const unsigned long long PacketTimestamp,
                         
 
                         // Stored Data - From Session Execlusive Node
@@ -240,8 +246,7 @@ namespace NDR
                                 // + Packet-Condition Match
                                 if( !seq_element.conditionManager.Match(pkt) )
                                     return false;
-
-                                std::cout << "Rule--매치됨" << std::endl;
+                                
 
                                 // + Pre Match
                                 if( !_Pre_Match(seq_element, RulesSequenceCycleCount) )
@@ -258,7 +263,7 @@ namespace NDR
                                 /*
                                     SUCCESS
                                 */
-                               
+                                std::cout << seq_element.index << std::endl;
                                 // complete_count 1증가할 지 확인.
                                 std::cout << "*next_Sequence_index: " << *next_Sequence_index << " || sequence.size(): " << sequence.size() << std::endl;
                                 if( *next_Sequence_index == ( sequence.size() - 1) )
@@ -289,6 +294,7 @@ namespace NDR
                     }
 
                 private:
+                    NDR::Util::Kafka::Kafka& KafkaProducer;
 
                     bool _Pre_Match(RuleSequence& seq_element, std::map<std::string,unsigned long long>& RulesSequenceCycleCount)
                     {
@@ -296,7 +302,7 @@ namespace NDR
                         {
                             
                             if(seq_element.Pre.value().not_complete_ids.has_value() )
-                            {std::cout << "1PRE있음" << std::endl;
+                            {
                                 /*
                                     not_complete 는 등록된 id 규칙에서 시퀀스가 모두 돌지 않았을 때 true를 반환
                                     1번 이상 돌았다면, false 반환
@@ -313,7 +319,7 @@ namespace NDR
                             }
 
                             if(seq_element.Pre.value().complete_ids.has_value() )
-                            {std::cout << "2PRE있음" << std::endl;
+                            {
                                 /*
                                     complete 는 등록된 id 규칙에서 시퀀스가 모두 한번이상 돌았을 때 true를 반환
                                     그 어느것 규칙object에서 못 돌았다면, false 반환
@@ -321,8 +327,7 @@ namespace NDR
                                 auto& complete = seq_element.Pre.value().complete_ids.value();
                                 for( auto& rule_id : complete )
                                 {
-                                    std::cout << fmt::format("rule_id: {} / CTX.RulesSequenceCycleCount[rule_id]: {} ", rule_id, RulesSequenceCycleCount[rule_id]) << std::endl;
-                                    if( RulesSequenceCycleCount[rule_id] == 0 )
+                                        if( RulesSequenceCycleCount[rule_id] == 0 )
                                     {
                                         return false;
                                     }

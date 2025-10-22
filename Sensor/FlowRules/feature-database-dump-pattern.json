@@ -1,0 +1,19 @@
+{
+    "id": "feature-database-dump-pattern",
+    "description": "Detects patterns indicative of a database dump, such as 'CREATE TABLE' and 'INSERT INTO' statements.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    { "string": "CREATE TABLE" },
+                    { "string": "INSERT INTO" },
+                    { "string": "create table" },
+                    { "string": "insert into" }
+                ]
+            },
+            "action": { "type": "notice", "message": "Database dump patterns ('CREATE TABLE', 'INSERT INTO') detected in payload." }
+        }
+    ]
+}

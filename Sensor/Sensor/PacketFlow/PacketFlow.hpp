@@ -19,8 +19,9 @@ namespace NDR
             class PacketFlowManager
             {
             public:
-                PacketFlowManager(std::string FlowRuleDir, std::string PcapSavedDir, std::string CertsDir)
-                : RuleManager(FlowRuleDir),
+                PacketFlowManager(NDR::Util::Kafka::Kafka& KafkaProducer, std::string FlowRuleDir, std::string PcapSavedDir, std::string CertsDir)
+                : KafkaProducer(KafkaProducer),
+                RuleManager(KafkaProducer, FlowRuleDir),
                 SSL_Manager(CertsDir),
                 PacketNetworkSession(PcapSavedDir, RuleManager)
                 {}
@@ -75,6 +76,7 @@ namespace NDR
                                 pcpp::Packet pcppPacket(&pcppRawPacket);
 
                                 // 3. Session Processing
+                                //std::cout << "Session_Processing .." << std::endl;
                                 PacketNetworkSession.Session_Processing(
                                     PacketEvent->protocol,
                                     
@@ -88,9 +90,11 @@ namespace NDR
                                     pcppRawPacket,
                                     pcppPacket
                                 );
+                                //td::cout << "Session_Processing END" << std::endl;
 
                                 delete[] PktInfo.PacketEvent;
                             }
+                            std::cout << "탈출된";
                             while(!this->PktInfoQueue.empty())
                             {
                                 delete[] this->PktInfoQueue.get().PacketEvent;
@@ -131,6 +135,7 @@ namespace NDR
 
                 NDR::Sensor::FlowRule::FlowRuleManager RuleManager;
                 NDR::Sensor::PacketSession::Network::NetworkSession PacketNetworkSession;
+                NDR::Util::Kafka::Kafka& KafkaProducer;
             };
             
         }

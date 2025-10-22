@@ -1,0 +1,18 @@
+{
+    "id": "feature-private-key-header",
+    "description": "Detects the header of a private key file transmitted in cleartext.",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "string": "-----BEGIN RSA PRIVATE KEY-----"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Private key file header detected in cleartext payload." }
+        }
+    ]
+}
