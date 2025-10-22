@@ -78,6 +78,8 @@ namespace NDR
                 unsigned long long PacketCount = 0;
                 unsigned long long PacketCountCycle = 0; // unsigned long long 범위 초과시 ++1 
 
+				// 
+
                 // Timeout - 
 
                 // 규칙기반 Flow 감지 (  )
@@ -215,6 +217,7 @@ namespace NDR
                             }
                         );
 
+						// Enable ToPcap Instance
 						Session[SessionKey_A].ToPcapFileSaver.Initialize(
 							PcapSavedDir,
 							Session[SessionKey_A].SessionID,
@@ -287,6 +290,9 @@ namespace NDR
 
                     // 2. session이 독자적으로 가지고 있는 규칙/정책을 진행
                     session.RuleDetection( PacketInstance, PktDirection );
+
+					// 3. 
+					
                 }
 
 				void SessionLoopChecker()

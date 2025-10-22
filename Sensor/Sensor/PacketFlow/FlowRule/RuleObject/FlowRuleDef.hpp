@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <array>
+#include <regex> // <regex> 헤더 추가
 
 #include "../../../../util/util.hpp" // json, etc.
 
@@ -25,6 +26,8 @@
 #include <pcapplusplus/EthLayer.h>
 #include <pcapplusplus/SSLLayer.h>
 #include <pcapplusplus/SSLHandshake.h>
+#include <pcapplusplus/Layer.h>
+#include <pcapplusplus/IPv6Layer.h>
 
 
 /*
@@ -109,6 +112,7 @@ namespace NDR
                     constexpr const char* DNS      = "dns";
                     constexpr const char* HTTP     = "http";
                     constexpr const char* TLS      = "tls";
+                    constexpr const char* PAYLOAD      = "payload"; // 해석되지 못한 데이터 바이너리들
                 }
                 // ---------------------------
                 // 프로토콜별 필드 정의
@@ -162,6 +166,78 @@ namespace NDR
                     {
                         ProtocolKey::TLS,
                         {"version", "handshake_type", "sni", "cipher_suites"}
+                    },
+                    // PAYLOAD ( None-Parsed Layer )
+                    {
+                        ProtocolKey::PAYLOAD,
+                        {
+                            /*
+                            {
+                                "payload" : [
+                                    {
+                                        "size": 1234, 바이트
+                                        "size_match_method": "==" 또는 ">" 또는 "<" 또는 ">=" 또는 "<=" 또는 "!=",
+                                        "binary": ff1144.. 2자리형 헥스문자열,
+                                        "offset" : 0, "offset" 키가 있다면 ,해당 값(정수)을 매치 시작점. "offset"이 없다면 contains로 진행
+                                    },,
+                                ]
+                            }
+                            */
+                           /*
+                                A - 사용예시 (페이로드 크기가 500바이트보다 크고, "evil" 문자열(hex: 6576696c)을 포함하는 패킷)
+                                "payload": [
+                                    {
+                                        "size": 500,
+                                        "size_match_method": ">"
+                                    },
+                                    {
+                                        "binary": "6576696c"
+                                    }
+                                ]
+
+                                B - 사용예시 (페이로드 크기가 64바이트가 아니고, 오프셋 8에서 1A2B3C 패턴이 나타나는 패킷)
+                                "payload": [
+                                    {
+                                        "size": 64,
+                                        "size_match_method": "!="
+                                    },
+                                    {
+                                        "binary": "1A2B3C",
+                                        "offset": 8
+                                    }
+                                ]
+
+                                C - 사용예시 (리눅스 명령어 매치)
+                                "payload": [
+                                    {
+                                        "regex": "(ls|cat|rm|cp|wget|curl)\\s+-[a-zA-Z0-9]"
+                                    }
+                                ]
+
+                                D - 사용예시 (인젝션 매치)
+
+                                "payload": [
+                                    {
+                                        "size": 100,
+                                        "size_match_method": ">="
+                                    },
+                                    {
+                                        "regex": "('|\"|;|--|\\/\\*).*?(UNION|SELECT|INSERT|UPDATE|DELETE)"
+                                    }
+                                ]
+                           */
+                            "size",             // 바이너리 사이즈 예시) { "size",  }
+                            "match_method", 
+                            "binary",      // 바이너리 매치 예시) {"binary_match": {"binary": "54F2"(2자리-hex형), "offset": 0(맨 앞에서부터 진행. "offset이 없다면 Contains형식으로 진행.") }}
+                            "offset",
+                            "string", // 문자열 기반 매치
+                            "regex" // regex 패턴 매치
+
+                            /*
+                                * binary , string , regex는 배열내 요소에서 한 JSON내 3개 동시에 적용되지 아니하며, 
+                                * binary > string > regex 우선순위로, 1개만 배치된다.
+                            */
+                        }
                     }
                 };
 
@@ -173,6 +249,188 @@ namespace NDR
                             ConditionObjectBase() = default;
                             virtual ~ConditionObjectBase() = default;
                             virtual bool Match(const pcpp::Packet& pkt) = 0;
+                    };
+
+                    /*
+                        PAYLOAD (None-Parsed L4+ Data) - Supports "binary" (hex) and "string" (plain text)
+                    */
+                    class ConditionPayloadObject : public ConditionObjectBase
+                    {
+                    private:
+                        enum class SizeMatchMethod { EQ, GT, LT, GTE, LTE, NE };
+
+                        struct PayloadCondition {
+                            std::optional<size_t> size;
+                            SizeMatchMethod method = SizeMatchMethod::EQ;
+                            std::optional<std::vector<uint8_t>> binary_pattern;
+                            std::optional<std::regex> regex_pattern;            // "regex" 전용
+
+                            std::optional<size_t> offset;
+                        };
+
+                        std::vector<PayloadCondition> conditions;
+
+                    public:
+                        explicit ConditionPayloadObject(const json& payloadCond)
+                        {
+                            if (!payloadCond.is_array())
+                            {
+                                std::cerr << "[ERROR] Payload condition must be an array of objects." << std::endl;
+                                return;
+                            }
+
+                            for (const auto& cond_item : payloadCond)
+                            {
+                                if (!cond_item.is_object()) continue;
+
+                                PayloadCondition p_cond;
+
+                                // 1. size 및 size_match_method 파싱
+                                if (cond_item.contains("size") && cond_item["size"].is_number())
+                                {
+                                    p_cond.size = cond_item["size"].get<size_t>();
+                                    if (cond_item.contains("size_match_method") && cond_item["size_match_method"].is_string())
+                                    {
+                                        std::string method_str = cond_item["size_match_method"].get<std::string>();
+                                        if (method_str == "==") p_cond.method = SizeMatchMethod::EQ;
+                                        else if (method_str == ">") p_cond.method = SizeMatchMethod::GT;
+                                        else if (method_str == "<") p_cond.method = SizeMatchMethod::LT;
+                                        else if (method_str == ">=") p_cond.method = SizeMatchMethod::GTE;
+                                        else if (method_str == "<=") p_cond.method = SizeMatchMethod::LTE;
+                                        else if (method_str == "!=") p_cond.method = SizeMatchMethod::NE;
+                                        else std::cerr << "[WARN] Unknown size_match_method: " << method_str << ". Defaulting to '=='." << std::endl;
+                                    }
+                                }
+
+                                // ==================== [수정된 부분 시작] ====================
+                                // 2. binary (hex) 또는 string (plain text) 파싱
+                                // "binary" 키를 우선적으로 처리합니다. ->  (binary > string > regex 우선순위)
+                                if (cond_item.contains("binary") && cond_item["binary"].is_string())
+                                {
+                                    p_cond.binary_pattern = hex_string_to_bytes(cond_item["binary"].get<std::string>());
+                                }
+                                else if (cond_item.contains("string") && cond_item["string"].is_string())
+                                {
+                                    std::string str_pattern = cond_item["string"].get<std::string>();
+                                    // std::string을 std::vector<uint8_t>로 변환합니다.
+                                    p_cond.binary_pattern.emplace(str_pattern.begin(), str_pattern.end());
+                                }
+                                else if (cond_item.contains("regex") && cond_item["regex"].is_string())
+                                {
+                                    try {
+                                        // 정규표현식을 컴파일하여 저장. 예외 발생 시 처리
+                                        p_cond.regex_pattern.emplace(cond_item["regex"].get<std::string>());
+                                    } catch (const std::regex_error& e) {
+                                        std::cerr << "[ERROR] Invalid regex pattern: '" << cond_item["regex"].get<std::string>()
+                                                << "'. Error: " << e.what() << std::endl;
+                                    }
+                                }
+                                // ==================== [수정된 부분 끝] ======================
+
+                                // 3. offset 파싱
+                                if (cond_item.contains("offset") && cond_item["offset"].is_number())
+                                {
+                                    p_cond.offset = cond_item["offset"].get<size_t>();
+                                }
+
+                                conditions.push_back(p_cond);
+                            }
+                        }
+
+                        bool Match(const pcpp::Packet& pkt) override
+                        {
+                            // 페이로드 탐색 및 매칭 로직은 이전과 동일합니다.
+                            const uint8_t* payload_data = nullptr;
+                            size_t payload_len = 0;
+                            pcpp::Layer* payloadContainer = pkt.getLayerOfType<pcpp::TcpLayer>() ? pkt.getLayerOfType<pcpp::TcpLayer>() :
+                                                        pkt.getLayerOfType<pcpp::UdpLayer>() ? pkt.getLayerOfType<pcpp::UdpLayer>() :
+                                                        pkt.getLayerOfType<pcpp::IcmpLayer>() ? pkt.getLayerOfType<pcpp::IcmpLayer>() :
+                                                        pkt.getLayerOfType<pcpp::IPv6Layer>() ? pkt.getLayerOfType<pcpp::IPv6Layer>() :
+                                                        static_cast<pcpp::Layer*>(pkt.getLayerOfType<pcpp::IPv4Layer>());
+                            if (payloadContainer) {
+                                payload_data = payloadContainer->getLayerPayload();
+                                payload_len = payloadContainer->getLayerPayloadSize();
+                            }
+                            
+                            for (const auto& p_cond : conditions)
+                            {
+                                 const uint8_t* search_start = payload_data;
+                                size_t search_len = payload_len;
+
+                                if (p_cond.size.has_value())
+                                {
+                                    bool size_ok = false;
+                                    switch (p_cond.method)
+                                    {
+                                        case SizeMatchMethod::EQ:  size_ok = (payload_len == p_cond.size.value()); break;
+                                        case SizeMatchMethod::GT:  size_ok = (payload_len >  p_cond.size.value()); break;
+                                        case SizeMatchMethod::LT:  size_ok = (payload_len <  p_cond.size.value()); break;
+                                        case SizeMatchMethod::GTE: size_ok = (payload_len >= p_cond.size.value()); break;
+                                        case SizeMatchMethod::LTE: size_ok = (payload_len <= p_cond.size.value()); break;
+                                        case SizeMatchMethod::NE:  size_ok = (payload_len != p_cond.size.value()); break;
+                                    }
+                                    if (!size_ok) return false;
+                                }
+
+                                if (p_cond.binary_pattern.has_value())
+                                {
+                                    // binary 또는 string 포함
+                                    const auto& pattern = p_cond.binary_pattern.value();
+                                    if (pattern.empty() || payload_len == 0) return false;
+
+                                    if (p_cond.offset.has_value())
+                                    {
+                                        size_t offset = p_cond.offset.value();
+                                        if (offset + pattern.size() > payload_len) return false;
+                                        if (std::memcmp(payload_data + offset, pattern.data(), pattern.size()) != 0) return false;
+                                    }
+                                    else
+                                    {
+                                        if (pattern.size() > payload_len) return false;
+                                        auto it = std::search(payload_data, payload_data + payload_len, pattern.begin(), pattern.end());
+                                        if (it == (payload_data + payload_len)) return false;
+                                    }
+                                }
+                                else if (p_cond.regex_pattern.has_value())
+                                {
+                                    // regex 전용
+                                    if (search_len == 0) return false;
+                                    
+                                    // std::regex_search는 이터레이터를 받으므로, null 종료 문자 없이도 안전하게 동작
+                                    if (!std::regex_search(
+                                            // 문자열 범위
+                                            reinterpret_cast<const char*>(search_start),
+                                            reinterpret_cast<const char*>(search_start + search_len),
+
+                                            // 패턴 삽입
+                                            p_cond.regex_pattern.value()))
+                                    {
+                                        return false;
+                                    }
+                                }
+                            }
+                            return true;
+                        }
+
+                    private:
+                        static std::vector<uint8_t> hex_string_to_bytes(const std::string& hex)
+                        {
+                            std::vector<uint8_t> bytes;
+                            if (hex.length() % 2 != 0) {
+                                std::cerr << "[WARN] Hex string has odd length: " << hex << std::endl;
+                                return bytes;
+                            }
+                            for (unsigned int i = 0; i < hex.length(); i += 2) {
+                                try {
+                                    bytes.push_back(static_cast<uint8_t>(std::stoul(hex.substr(i, 2), nullptr, 16)));
+                                } catch (const std::exception& e) {
+                                    std::cerr << "[ERROR] Invalid hex character in string: " << hex << " (" << e.what() << ")" << std::endl;
+                                    bytes.clear();
+                                    return bytes;
+                                }
+                            }
+                            return bytes;
+                        }
                     };
 
                     /*
@@ -210,6 +468,7 @@ namespace NDR
 
                         bool Match(const pcpp::Packet& pkt) override
                         {
+                            
                             if (pcpp::HttpRequestLayer* req = pkt.getLayerOfType<pcpp::HttpRequestLayer>())
                             {
                                 return MatchRequest(req);

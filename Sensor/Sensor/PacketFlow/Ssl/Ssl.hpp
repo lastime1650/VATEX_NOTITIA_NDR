@@ -190,54 +190,6 @@ namespace NDR
                             return false;
                         }
 
-                        /*int pipefd[2]; // [0]: read , [1] : write
-                        if (pipe(pipefd) == -1) perror("pipe failed");
-
-                        pid_t pid = fork();
-                        if (pid == 0) {
-                            close(pipefd[0]); // 자식에서 읽기 닫기
-
-                            execlp("sslproxy", "sslproxy",
-                                "-k", KeyPath.c_str(),
-                                "-c", CertPath.c_str(),
-                                "-P", "autossl",
-                                ServerIP.c_str(),
-                                std::to_string(ServerPORT).c_str(),
-                                "-I", SSL_MIRROR_DUMMY_INTERFACE_NAME,
-                                (char*)nullptr);
-
-                            
-                                if execlp Success ..
-                                -> exited child this
-                            
-
-                            
-                                if execlp Failed .. 
-                                executing below logics
-                            
-
-                            // execlp 실패 시 부모로 127 전송
-                            int err = 127;
-                            write(pipefd[1], &err, sizeof(err));
-                            _exit(127);
-                        } else {
-                            close(pipefd[1]); // 부모에서 쓰기 닫기
-
-                            int exec_err = 0;
-                            ssize_t n = read(pipefd[0], &exec_err, sizeof(exec_err));
-                            close(pipefd[0]);
-
-                            if (n > 0 || exec_err == 127) {
-                                std::cerr << "sslproxy 실행 실패\n";
-                                is_running = false;
-                                Proxy_ProcessId = 0;
-                                return false;
-                            } else {
-                                std::cout << "sslproxy PID: " << pid << std::endl;
-                                Proxy_ProcessId = pid;
-                            }
-                        }*/
-
                         return true;
                     }
                     
