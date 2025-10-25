@@ -129,7 +129,7 @@ namespace NDR
 
                     for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
                     {
-                        if (ifa->ifa_name == NULL || strcmp(ifa->ifa_name, "lo") == 0) 
+                        if (ifa->ifa_name == NULL || strcmp(ifa->ifa_name, "lo") == 0 || (strcmp(ifa->ifa_name, "enp3s0") != 0)) 
                             continue;
 
                         std::string ifname(ifa->ifa_name);

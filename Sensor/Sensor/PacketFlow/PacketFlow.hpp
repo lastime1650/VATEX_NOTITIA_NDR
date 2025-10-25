@@ -10,6 +10,8 @@
 #include "FlowRule/FlowRuleManager.hpp"
 #include "Ssl/Ssl.hpp"
 
+#include "../LogSender/LogSender.hpp"
+
 namespace NDR
 {
     namespace Sensor
@@ -19,11 +21,12 @@ namespace NDR
             class PacketFlowManager
             {
             public:
-                PacketFlowManager(NDR::Util::Kafka::Kafka& KafkaProducer, std::string FlowRuleDir, std::string PcapSavedDir, std::string CertsDir)
-                : KafkaProducer(KafkaProducer),
-                RuleManager(KafkaProducer, FlowRuleDir),
+                PacketFlowManager(NDR::Sensor::LogSender::Logger& Logger, std::string FlowRuleDir, std::string PcapSavedDir, std::string CertsDir)
+                : Logger(Logger),
+                ToPcap(PcapSavedDir),
+                RuleManager(Logger, FlowRuleDir),
                 SSL_Manager(CertsDir),
-                PacketNetworkSession(PcapSavedDir, RuleManager)
+                PacketNetworkSession(Logger, ToPcap, RuleManager)
                 {}
 
                 ~PacketFlowManager()
@@ -34,6 +37,9 @@ namespace NDR
                 bool Run()
                 {
                     if(is_running)
+                        return false;
+                    
+                    if(!ToPcap.Run() )
                         return false;
                     
                     // SSL Proxy Open
@@ -85,6 +91,7 @@ namespace NDR
                                     PacketEvent->ipDst,
                                     PacketEvent->portDst,
 
+                                    PacketEvent->ifindex,
                                     PacketEvent->is_INGRESS,
 
                                     pcppRawPacket,
@@ -110,6 +117,9 @@ namespace NDR
                     if(!is_running)
                         return false;
 
+                    if( !ToPcap.Stop() )
+                        return false;
+
                     // Ebpf Receive Closing
                     if( !Receiver.Stop() )
                         return false;
@@ -126,6 +136,7 @@ namespace NDR
             private:
                 NDR::Sensor::SSL::SSL_Manager SSL_Manager;
                 NDR::Sensor::PacketRecevier::Receiver Receiver; 
+                NDR::Sensor::ToPcap::ToPcap ToPcap;
 
 
                 NDR::Util::Queue::Queue<NDR::Util::eBPF::QueueStruct::EbpfPacketQueueStruct> PktInfoQueue;
@@ -135,7 +146,9 @@ namespace NDR
 
                 NDR::Sensor::FlowRule::FlowRuleManager RuleManager;
                 NDR::Sensor::PacketSession::Network::NetworkSession PacketNetworkSession;
-                NDR::Util::Kafka::Kafka& KafkaProducer;
+
+
+                NDR::Sensor::LogSender::Logger& Logger;
             };
             
         }

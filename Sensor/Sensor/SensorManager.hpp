@@ -4,7 +4,7 @@
 #include "../util/util.hpp"
 
 #include "PacketFlow/PacketFlow.hpp"
-
+#include "LogSender/LogSender.hpp"
 
 namespace NDR
 {
@@ -14,14 +14,12 @@ namespace NDR
         {
             public:
                 Manager(
-                    std::string KafkaIp,
-                    unsigned long Kafkaport,
-                    std::string Kafkatopic,
+                    NDR::Sensor::LogSender::Logger& Logger,
 
                     std::string FlowRuleDir, std::string PcapFileSavedDir, std::string CertsDir
                 )
-                : KafkaProducer(KafkaIp, Kafkaport, Kafkatopic),
-                FlowManger(KafkaProducer, FlowRuleDir, PcapFileSavedDir, CertsDir)
+                : Logger(Logger),
+                FlowManger(Logger, FlowRuleDir, PcapFileSavedDir, CertsDir)
                 {}
 
                 ~Manager()
@@ -35,6 +33,8 @@ namespace NDR
                         return false;
                     
                     
+
+                    
                     if( FlowManger.Run() )
                         is_running = true;
                     else
@@ -47,6 +47,8 @@ namespace NDR
                 {
                     if(!is_running)
                         return false;
+                    
+                    
 
                     if( FlowManger.Stop() )
                         is_running = false;
@@ -58,8 +60,10 @@ namespace NDR
 
 
             private:
-                NDR::Util::Kafka::Kafka KafkaProducer;
+                NDR::Sensor::LogSender::Logger& Logger;
+
                 NDR::Sensor::PacketFlow::PacketFlowManager FlowManger;
+
 
                 bool is_running = false;
 

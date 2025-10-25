@@ -13,6 +13,8 @@
 
 #include "../Payload/PktPayload.hpp"
 
+#include "../../LogSender/LogSender.hpp"
+
 namespace NDR
 {
     namespace Sensor
@@ -71,8 +73,10 @@ namespace NDR
 				unsigned long long first_seen_nanotimestamp;
 				unsigned long long last_seen_nanotimestamp;
 
+				NDR::Sensor::LogSender::Logger* Logger;
+
 				// To Pcap
-				NDR::Sensor::ToPcap::ToPcap ToPcapFileSaver;
+				//NDR::Sensor::ToPcap::ToPcap ToPcapFileSaver;
 
 
                 unsigned long long PacketCount = 0;
@@ -87,39 +91,100 @@ namespace NDR
 				std::map<std::string,unsigned long long> RulesSequenceCycleCount; // 특정 rule의 시퀀스 전체 회전 카운트 최소1 이상값이 들어가면 "전체 성공"으로 취급.
                 void RuleDetection(const pcpp::Packet& PacketInstance, const NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection)
                 {
+					
 					// Queue 기반 Rule로 변경하라. (규칙이 많을수록 지연이 늘어남..)
+					// 구조체 생성자와 소멸자를 적절히 구현. 
                     if( !rules.size() )
                         return;
                     
+					
+
                     for(auto& rule : rules)
-                        rule.Rule->Match(
-							SessionID,
+					{
+						unsigned long long DoRuleStageIndexValue = rule.currentIndex;
+						unsigned long long NextRuleStageIndexValue = DoRuleStageIndexValue; // init
 
-                            // Live Data - From Session Execlusive Node
-                            PacketInstance, 
-                            PktDirection, 
-                            last_seen_nanotimestamp,
+						if(
+							rule.Rule->Match(
+								SessionID,
 
-                            // Stored Data - From Session Execlusive Node
-                            rule.CTX,
-                            &rule.currentIndex,
-							RulesSequenceCycleCount
-                        );
+								// Live Data - From Session Execlusive Node
+								PacketInstance, 
+								PktDirection, 
+								last_seen_nanotimestamp,
+
+								// Stored Data - From Session Execlusive Node
+								rule.CTX,
+								&NextRuleStageIndexValue,
+								RulesSequenceCycleCount
+							)
+						)
+						{
+							// Match 성공시
+							unsigned long long completed_stage_index;
+							if(NextRuleStageIndexValue)
+								completed_stage_index = (NextRuleStageIndexValue - 1);
+							else
+								// 이 경우는 index값이 0이므로.. 이전의 index 값으로 설정.(stage재귀방식)
+								completed_stage_index = DoRuleStageIndexValue;
+
+							auto& Stage = rule.Rule->sequence.at(completed_stage_index);
+
+							if(Stage.action.has_value())
+							{
+								/*
+									
+										.rule_id = rule.Rule->id,
+										.rule_description = rule.Rule->description,
+										.severity = rule.Rule->severity,
+										.DetectedStage = {
+															.index = Stage.index,
+															.StageNode = completed_stage_index,
+															.action = {
+																.Action = Stage.action->type,
+																.message = Stage.action->message
+															}
+														}
+									
+								*/
+
+								//rule.Rule
+								/*
+								Logger->Session_Rule_Detection_Message(
+									SessionID,
+									NDR::Util::timestamp::Get_Real_Timestamp(),
+									NDR::Sensor::LogSender::SessionRuleDetectInfo{
+										.rule_id = rule.Rule->id,
+										.rule_description = rule.Rule->description,
+										.severity = rule.Rule->severity,
+										.DetectedStage = {
+															.StageNode = completed_stage_index,
+															.index = Stage.index,
+															
+															.action = {
+																.Action = Stage.action->type,
+																.message = Stage.action->message
+															}
+														}
+									}
+								);*/
+							}
+						}
+						rule.currentIndex = NextRuleStageIndexValue; // Update Stage Index (current)
+						
+					}
+                        
+						
                 }
-
-                // 바이너리 등 상위 프로토콜 검사
-                //void DPI(pcpp::Packet& PacketInstance)
-                //{
-                    
-                //}
 			};
 
 			class NetworkSession
 			{
 			public:
-				NetworkSession(std::string PcapSavedDir, NDR::Sensor::FlowRule::FlowRuleManager& RuleManager)
-                : RuleManager(RuleManager),
-				PcapSavedDir(PcapSavedDir)
+				NetworkSession(NDR::Sensor::LogSender::Logger& Logger, NDR::Sensor::ToPcap::ToPcap& ToPcap, NDR::Sensor::FlowRule::FlowRuleManager& RuleManager)
+                : Logger(Logger),
+				RuleManager(RuleManager),
+				ToPcap(ToPcap)
 				{
 					this->network_session_check_thread = std::thread(
                         [this]() { 
@@ -145,6 +210,7 @@ namespace NDR
 					std::string Remote_IP,
 					unsigned long Remote_PORT,
 
+					int ifindex,
                     bool is_Ingress,
 
                     pcpp::RawPacket& RawPacketInstance,
@@ -215,19 +281,34 @@ namespace NDR
                                 .SessionID = NDR::Util::hash::sha256FromString(SessionSource),
                                 .first_seen_nanotimestamp = nano_timestamp,
                                 .last_seen_nanotimestamp = nano_timestamp,
-                                
+                                .Logger = &Logger,
                                 .rules = Rules,
 								.RulesSequenceCycleCount = RulesSequenceCycleCount
                             }
                         );
 
-						// Enable ToPcap Instance
-						Session[SessionKey_A].ToPcapFileSaver.Initialize(
-							PcapSavedDir,
-							Session[SessionKey_A].SessionID,
-							Session[SessionKey_A].first_seen_nanotimestamp
+						auto tmp_ifname = new char[16];
+						auto tmp_ifname_start_ptr = if_indextoname(
+							ifindex,
+							tmp_ifname
 						);
-						Session[SessionKey_A].ToPcapFileSaver.Run();
+						/*
+							[ 로그전송 - 세션시작 ]
+						*/
+						Logger.Session_Start_Message(
+							Session[SessionKey_A].SessionID,
+							Session[SessionKey_A].first_seen_nanotimestamp,
+							NDR::Sensor::LogSender::DefaultCurrentPacketInfo{
+								.protocol = NDR::Util::ProtocolToString(ProtocolNumber),
+								.sourceip = Local_IP,
+								.sourceport = Local_PORT,
+								.destinationip = Remote_IP,
+								.destinationport = Remote_PORT,
+								
+								.direction = (is_Ingress ? "in" : "out" ),
+								.iface = tmp_ifname_start_ptr
+							}
+						);
 
                         /*
                             Postfix 작업
@@ -256,7 +337,8 @@ namespace NDR
                 }
 
 			private:
-				std::string PcapSavedDir;
+				NDR::Sensor::LogSender::Logger& Logger;
+				NDR::Sensor::ToPcap::ToPcap& ToPcap;
                 NDR::Sensor::FlowRule::FlowRuleManager& RuleManager;
 
 				std::unordered_map<
@@ -269,7 +351,7 @@ namespace NDR
 				std::thread network_session_check_thread;
 				std::mutex mtx;
 				unsigned long long threadsleepsec = 5;
-				unsigned long long timeout = 10ULL * 1000000000; // 10초 타임아웃 범위
+				unsigned long long timeout = 4ULL * 1000000000; // 10초 타임아웃 범위
 
                 // Postfix Function
                 inline bool _post_packetsession( NetworkSessionInfo& session, pcpp::RawPacket& RawPacketInstance, pcpp::Packet& PacketInstance, NDR::Sensor::FlowRule::RuleObject::RuleDirection PktDirection )
@@ -285,13 +367,12 @@ namespace NDR
 
 						
 					// 1. pcap 파일 저장 ( 무조건 비동기 처리여야함 )
-					/*
-					session.ToPcapFileSaver.AppendPacket(
+					ToPcap.AppendPacket(
 						session.last_seen_nanotimestamp, // 해당 패킷 최근 발생시간 ( 최신 )
 
 						RawPacketInstance.getRawData(),
 						RawPacketInstance.getRawDataLen()
-					);*/
+					);
 
                     // 2. session이 독자적으로 가지고 있는 규칙/정책을 진행
                     session.RuleDetection( PacketInstance, PktDirection );
@@ -300,9 +381,9 @@ namespace NDR
 
 				void SessionLoopChecker()
 				{
-					return;
 					while (!stop_thread)
 					{
+						std::cout << "SCL head" << std::endl;
 						std::this_thread::sleep_for(std::chrono::seconds(threadsleepsec));
 
 						unsigned long long now_nanotimestamp = NDR::Util::timestamp::Get_Real_Timestamp();
@@ -313,17 +394,30 @@ namespace NDR
 							for (auto it = Session.begin(); it != Session.end(); )
 							{
 								NetworkSessionInfo& value = it->second;
-
+								std::cout << value.SessionID << std::endl;
 								if (now_nanotimestamp > (value.last_seen_nanotimestamp + timeout))
 									{
+										
+										/*
+											[ 로그전송 - 세션타임아웃 ]
+										*/
+										Logger.Session_Timeout_Message(
+											value.SessionID,
+											now_nanotimestamp,
+											
+											value.last_seen_nanotimestamp,
+											timeout
+										);
+
 										it = Session.erase(it);
-										//std::cout << "timeout! || " << fmt::format("{}:{} -> {}:{}", value.self_key.Local_IP, value.self_key.Local_PORT, value.self_key.Remote_IP, value.self_key.Remote_PORT) << std::endl;
+										std::cout << "timeout!" << std::endl;
 									}
 								else
 									++it;
+								
 							}
 						}
-						
+						std::cout << "SCL tail" << std::endl;
 					}
 				}
 			};

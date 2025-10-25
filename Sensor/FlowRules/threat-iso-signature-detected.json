@@ -1,0 +1,19 @@
+{
+    "id": "threat-iso-signature-detected",
+    "description": "Detects the standard identifier for an ISO 9660 disk image.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "string": "CD001",
+                        "offset": 32769
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "ISO 9660 disk image signature detected. ISOs are a common malware delivery vector to bypass security controls." }
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "id": "feature-powershell-hidden-window",
+    "description": "Detects PowerShell being launched with a hidden window style.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "(-WindowStyle|-w)\\s+Hidden"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "PowerShell execution with a hidden window style detected." }
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "id": "threat-powershell-encoded-command",
+    "description": "Detects PowerShell execution with a base64 encoded command, a common obfuscation technique.",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "powershell(.exe)?\\s+(-e|-enc|-EncodedCommand)\\s+[A-Za-z0-9+/=]{20,}"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "PowerShell encoded command detected. This is a strong indicator of malicious activity." }
+        }
+    ]
+}

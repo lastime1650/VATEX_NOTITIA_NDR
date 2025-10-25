@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-tcp-port-445-smb",
+    "description": "Detects an inbound SMB connection from an external source to an internal host on TCP port 445.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "tcp": { "dst_port": 445 } },
+            "action": { "type": "notice", "message": "Ingress SMB traffic detected on TCP port 445. This should be monitored closely." }
+        }
+    ]
+}

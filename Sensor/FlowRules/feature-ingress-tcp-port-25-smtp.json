@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-tcp-port-25-smtp",
+    "description": "Detects an inbound SMTP connection to an internal mail server on TCP port 25.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "tcp": { "dst_port": 25 } },
+            "action": { "type": "notice", "message": "Ingress SMTP traffic detected to internal mail server on TCP port 25." }
+        }
+    ]
+}

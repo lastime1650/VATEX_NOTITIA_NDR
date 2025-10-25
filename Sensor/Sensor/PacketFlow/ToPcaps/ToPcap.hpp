@@ -29,6 +29,8 @@
 
                 struct ToPcapQueueData
                 {
+                    std::string SessionId;
+
                     unsigned long long timestamp;
                     std::vector<uint8_t> Frame;
                 };
@@ -39,14 +41,14 @@
                     
 
                     public:
-                        ToPcap() = default;
+                        ToPcap(std::string PcapDir):PcapDir(PcapDir){}
                         ~ToPcap(){
+                            std::cout << "~ToPcap called" << std::endl;
                             Stop();
-                            ToPcapLoopThread.reset();
-                            ToPcapQueue.reset();
+                            std::cout << "~ToPcap end" << std::endl;
                         }
 
-                        bool Initialize( std::string PcapDir, std::string SessionId, unsigned long long SessionStartedTimestamp ) 
+                        bool save_pcap( std::string SessionId, unsigned long long Timestamp, pcap_pkthdr* pkthdr, const uint8_t* PacketData, const uint8_t* PacketDataEnd ) 
                         {
                             // Make PcapFileName (abs PATH)
                             /*
@@ -56,7 +58,7 @@
                             if(PcapDir.back() == '/')
                                 PcapDir.pop_back();
 
-                            auto TimestampStr = std::to_string(SessionStartedTimestamp);
+                            auto TimestampStr = std::to_string(Timestamp);
 
                             std::string pcapFileFullPath;
                             pcapFileFullPath.reserve(
@@ -64,13 +66,32 @@
                             );
                             pcapFileFullPath = ( PcapDir + "/" + SessionId + "-" + TimestampStr + ".pcap" );
 
-                            this->PcapFilePath = pcapFileFullPath;
+                            // 최초 패킷 저장인가?
+                            if( !this->FileHandlerInstance.is_valid_file(pcapFileFullPath) )
+                            {
+                                // 최초일 때,
+                                // PCAP 파일 시그니처 입력
+                                this->FileHandlerInstance.writeToFile(
+                                    pcapFileFullPath,
+                                    std::vector<uint8_t>( (uint8_t*)&global_header, ( ( (uint8_t*)&global_header )+ sizeof(global_header) ) )
+                                );
+                            }
 
-                            // PCAP 파일 시그니처 입력
+                            // 패킷 저장
                             this->FileHandlerInstance.writeToFile(
-                                this->PcapFilePath,
-                                std::vector<uint8_t>( (uint8_t*)&global_header, ( ( (uint8_t*)&global_header )+ sizeof(global_header) ) )
-                            );
+                                                pcapFileFullPath,
+                                                std::vector<uint8_t>( (uint8_t*)pkthdr, ( (uint8_t*)pkthdr + sizeof(pcap_pkthdr) )  ),
+                                                true
+                                            );
+
+                            this->FileHandlerInstance.writeToFile(
+                                                pcapFileFullPath,
+                                                std::vector<uint8_t>( PacketData, PacketDataEnd ),
+                                                true
+                                            );
+                            
+
+                            return true;
 
                         }
 
@@ -81,12 +102,12 @@
                             
                             is_running = true;
 
-                            ToPcapLoopThread = std::make_shared<std::thread>(
+                            ToPcapLoopThread = std::thread(
                                 [this]()
                                 {
                                     while(this->is_running)
                                     {
-                                        auto FramePacketInfo = this->ToPcapQueue->get();
+                                        auto FramePacketInfo = this->ToPcapQueue.get();
 
                                         {
                                             /*
@@ -97,11 +118,6 @@
                                             pkthdr.ts_usec  = (FramePacketInfo.timestamp % 1000000000ULL) / 1000;
                                             pkthdr.incl_len = FramePacketInfo.Frame.size();
                                             pkthdr.orig_len = FramePacketInfo.Frame.size();
-                                            this->FileHandlerInstance.writeToFile(
-                                                this->PcapFilePath,
-                                                std::vector<uint8_t>( (uint8_t*)&pkthdr, ( (uint8_t*)&pkthdr + sizeof(pkthdr) )  ),
-                                                true
-                                            );
 
                                             /*
                                                 2. 패킷 바이너리 이어서.
@@ -109,15 +125,16 @@
                                             const uint8_t* PacketData = FramePacketInfo.Frame.data();
                                             const uint8_t* PacketDataEnd = PacketData + FramePacketInfo.Frame.size();
 
-                                            this->FileHandlerInstance.writeToFile(
-                                                this->PcapFilePath,
-                                                std::vector<uint8_t>( PacketData, PacketDataEnd ),
-                                                true
+                                            this->save_pcap(
+                                                FramePacketInfo.SessionId,
+                                                FramePacketInfo.timestamp,
+                                                &pkthdr,
+                                                PacketData,
+                                                PacketDataEnd
                                             );
                                         }
                                     }
-                                    while(!this->ToPcapQueue->empty())
-                                        this->ToPcapQueue.get();
+                                    
 
                                 }
                             );
@@ -131,8 +148,8 @@
 
                             is_running = false;
 
-                            if(ToPcapLoopThread->joinable())
-                                ToPcapLoopThread->join();
+                            if(ToPcapLoopThread.joinable())
+                                ToPcapLoopThread.join();
                             
                                 
                             return true;
@@ -142,7 +159,7 @@
                         {
                             if(PacketDataLen && RealPacketDataPtr)
                             {
-                                ToPcapQueue->put(
+                                ToPcapQueue.put(
                                     ToPcapQueueData{
                                         .timestamp = timestamp,
                                         .Frame = std::vector<uint8_t>(RealPacketDataPtr, RealPacketDataPtr+PacketDataLen)
@@ -153,15 +170,13 @@
 
                     private:
                         pcap_file_header global_header;
-                        std::string PcapFilePath;
                         NDR::Util::File::FileHandler FileHandlerInstance;
 
                         bool is_running = false;
-                        std::shared_ptr< std::thread > ToPcapLoopThread;
+                        std::thread ToPcapLoopThread;
 
-                        std::shared_ptr< NDR::Util::Queue::Queue<ToPcapQueueData> > ToPcapQueue = std::make_shared<NDR::Util::Queue::Queue<ToPcapQueueData>>();
-                        
-
+                        NDR::Util::Queue::Queue<ToPcapQueueData> ToPcapQueue;
+                        std::string PcapDir;
 
                 };
             }

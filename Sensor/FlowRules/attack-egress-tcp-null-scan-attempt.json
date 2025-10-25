@@ -8,7 +8,7 @@
             "direction": "out",
             "condition": { "tcp": { "flags": [] } },
             "pre": { "not_complete_ids": ["default-egress-tcp-session-established"] },
-            "action": { "type": "notice", "message": "Ingress TCP NULL scan attempt detected (out-of-state no-flags packet)." }
+            "action": { "type": "notice", "message": "Egress TCP NULL scan attempt detected (out-of-state no-flags packet)." }
         }
     ]
 }

@@ -1,0 +1,18 @@
+{
+    "id": "feature-xor-related-keywords",
+    "description": "Detects keywords related to XOR operations, often used for simple data obfuscation.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "\\b(xor-key|xor_encrypt|simple_xor|xor_string)\\b"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "XOR-related keywords detected, suggesting simple data obfuscation may be in use." }
+        }
+    ]
+}

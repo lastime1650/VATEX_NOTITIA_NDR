@@ -1,0 +1,19 @@
+{
+    "id": "feature-elf-header-detected",
+    "description": "Detects the header of an ELF (Executable and Linkable Format) file, common on Linux and Unix-like systems.",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "binary": "7F454C46",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "ELF file header detected. This may indicate transfer of a Linux/Unix executable." }
+        }
+    ]
+}

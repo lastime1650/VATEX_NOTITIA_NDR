@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-tcp-port-5432-postgresql",
+    "description": "Detects an inbound connection to an internal PostgreSQL server on TCP port 5432.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "tcp": { "dst_port": 5432 } },
+            "action": { "type": "notice", "message": "Ingress PostgreSQL traffic detected to internal server on TCP port 5432." }
+        }
+    ]
+}

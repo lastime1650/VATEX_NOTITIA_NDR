@@ -1,0 +1,13 @@
+{
+    "id": "feature-egress-tcp-port-5432-postgresql",
+    "description": "Detects an outbound connection from an internal client to an external PostgreSQL server on TCP port 5432.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "out",
+            "condition": { "tcp": { "dst_port": 5432 } },
+            "action": { "type": "notice", "message": "Egress PostgreSQL traffic detected from internal client on TCP port 5432." }
+        }
+    ]
+}

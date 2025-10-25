@@ -1,21 +1,13 @@
 {
-    "id": "plain-text-hello-detection",
-    "description": "Detects the plain text string 'hello' in the packet payload.",
+    "id": "feature-egress-tcp-port-80-http",
+    "description": "Detects an outbound HTTP request from an internal client on TCP port 80.",
     "severity": "info",
     "sequence": [
         {
             "index": "A",
-            "condition": {
-                "payload": [
-                    {
-                        "string": "hello"
-                    }
-                ]
-            },
-            "action": {
-                "type": "notice",
-                "message": "Detected 'hello' string in packet payload."
-            }
+            "direction": "out",
+            "condition": { "tcp": { "dst_port": 80 } },
+            "action": { "type": "notice", "message": "Egress unencrypted HTTP traffic detected from internal client on TCP port 80." }
         }
     ]
 }

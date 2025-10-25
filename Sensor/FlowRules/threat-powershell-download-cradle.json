@@ -1,0 +1,18 @@
+{
+    "id": "threat-powershell-download-cradle",
+    "description": "Detects PowerShell download and execute patterns (DownloadString/IEX), typical of fileless malware.",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "(IEX|Invoke-Expression).*?(New-Object|Net\\.WebClient).*?(DownloadString|DownloadFile)"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "PowerShell download cradle detected (IEX/DownloadString). Possible fileless malware execution." }
+        }
+    ]
+}

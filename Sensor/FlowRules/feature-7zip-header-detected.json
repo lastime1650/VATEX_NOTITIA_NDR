@@ -1,0 +1,19 @@
+{
+    "id": "feature-7zip-header-detected",
+    "description": "Detects the header of a 7-Zip archive.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "binary": "377ABCAF271C",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "7-Zip archive header detected." }
+        }
+    ]
+}

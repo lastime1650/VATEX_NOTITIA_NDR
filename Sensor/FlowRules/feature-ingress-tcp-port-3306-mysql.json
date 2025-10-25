@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-tcp-port-3306-mysql",
+    "description": "Detects an inbound connection to an internal MySQL server on TCP port 3306.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "tcp": { "dst_port": 3306 } },
+            "action": { "type": "notice", "message": "Ingress MySQL traffic detected to internal server on TCP port 3306." }
+        }
+    ]
+}

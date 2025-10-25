@@ -1,0 +1,13 @@
+{
+    "id": "feature-egress-udp-port-53-dns",
+    "description": "Detects an outbound DNS query from an internal client to an external DNS server on UDP port 53.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "out",
+            "condition": { "udp": { "dst_port": 53 } },
+            "action": { "type": "notice", "message": "Egress DNS query detected from internal client on UDP port 53." }
+        }
+    ]
+}

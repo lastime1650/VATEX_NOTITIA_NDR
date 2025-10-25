@@ -1,0 +1,19 @@
+{
+    "id": "feature-rar-header-detected",
+    "description": "Detects the header of a RAR archive.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "binary": "526172211A0700",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "RAR archive header detected. Archives are often used to package malicious files." }
+        }
+    ]
+}

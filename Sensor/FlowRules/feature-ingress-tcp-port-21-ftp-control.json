@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-tcp-port-21-ftp-control",
+    "description": "Detects an inbound FTP control connection to an internal server on TCP port 21.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "tcp": { "dst_port": 21 } },
+            "action": { "type": "notice", "message": "Ingress FTP Control traffic detected to internal server on TCP port 21." }
+        }
+    ]
+}

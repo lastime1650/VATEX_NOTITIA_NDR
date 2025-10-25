@@ -4,8 +4,10 @@
 #include "../../../../util/util.hpp"
 
 #include "FlowRuleDef.hpp"
+#include "../../../LogSender/LogSender.hpp"
 
 #include <pcapplusplus/Packet.h>
+
 
 namespace NDR
 {
@@ -80,14 +82,16 @@ namespace NDR
                     
                     std::string id;
                     std::string description;
+                    std::string severity;
                     std::vector<RuleSequence> sequence;
 
 
-                    RuleObject(NDR::Util::Kafka::Kafka& KafkaProducer, json RuleJson)
-                    :KafkaProducer(KafkaProducer)
+                    RuleObject(NDR::Sensor::LogSender::Logger& Logger, json RuleJson)
+                    :Logger(Logger)
                     {
                         id = RuleJson.value("id", "");
                         description = RuleJson.value("description", "");
+                        severity = RuleJson.value("severity", "");
 
                         // 1. Seq각 Index 문자열과 인덱스값간 매핑
                         unsigned long long index_index = 0;
@@ -220,8 +224,8 @@ namespace NDR
                     
                     bool Match(
 
-                        // Queue 기반 Rule로 변경하라. (규칙이 많을수록 지연이 늘어남..)
                         
+
                         // Session Info
                         const std::string& SessionID,
 
@@ -297,7 +301,7 @@ namespace NDR
                     }
 
                 private:
-                    NDR::Util::Kafka::Kafka& KafkaProducer;
+                    NDR::Sensor::LogSender::Logger& Logger;
 
                     bool _Pre_Match(RuleSequence& seq_element, std::map<std::string,unsigned long long>& RulesSequenceCycleCount)
                     {

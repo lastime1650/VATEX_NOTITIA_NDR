@@ -1,0 +1,14 @@
+{
+    "id": "attack-ingress-tcp-null-scan-attempt",
+    "description": "Detects an out-of-state TCP packet with no flags set from an external source, indicating a TCP NULL scan.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "Null-Probe",
+            "direction": "in",
+            "condition": { "tcp": { "flags": [] } },
+            "pre": { "not_complete_ids": ["default-ingress-tcp-session-established"] },
+            "action": { "type": "notice", "message": "Ingress TCP NULL scan attempt detected (out-of-state no-flags packet)." }
+        }
+    ]
+}

@@ -3,6 +3,7 @@
 
 #include "../../../util/util.hpp"
 #include "RuleObject/RuleObject.hpp"
+#include "../../LogSender/LogSender.hpp"
 
 namespace NDR
 {
@@ -31,8 +32,8 @@ namespace NDR
             class FlowRuleManager
             {
                 public:
-                    FlowRuleManager(NDR::Util::Kafka::Kafka& KafkaProducer, std::string RuleDir)
-                    : KafkaProducer(KafkaProducer),
+                    FlowRuleManager(NDR::Sensor::LogSender::Logger& Logger, std::string RuleDir)
+                    : Logger(Logger),
                     RuleDir(RuleDir)
                     {
                         if( !this->Reload_Rules() )
@@ -57,7 +58,7 @@ namespace NDR
 
                     std::vector< RuleObjectForSession > rules;
 
-                    NDR::Util::Kafka::Kafka& KafkaProducer;
+                    NDR::Sensor::LogSender::Logger& Logger;
 
 
                     bool _get_rule_file_paths(std::vector<std::filesystem::path>& output)
@@ -118,7 +119,7 @@ namespace NDR
 
                                 rules.push_back(
                                     RuleObjectForSession{
-                                        .Rule = std::make_shared< NDR::Sensor::FlowRule::RuleObject::RuleObject >(KafkaProducer, RULE),
+                                        .Rule = std::make_shared< NDR::Sensor::FlowRule::RuleObject::RuleObject >(Logger, RULE),
                                         .currentIndex = 0
                                     }
                                     //std::make_shared< NDR::Sensor::FlowRule::RuleObject::RuleObject >(RULE)

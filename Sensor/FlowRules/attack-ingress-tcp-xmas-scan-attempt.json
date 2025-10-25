@@ -1,0 +1,14 @@
+{
+    "id": "attack-ingress-tcp-xmas-scan-attempt",
+    "description": "Detects an out-of-state FIN/PSH/URG packet from an external source, indicating a TCP XMAS scan.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "Xmas-Probe",
+            "direction": "in",
+            "condition": { "tcp": { "flags": ["F", "P", "U"] } },
+            "pre": { "not_complete_ids": ["default-ingress-tcp-session-established"] },
+            "action": { "type": "notice", "message": "Ingress TCP XMAS scan attempt detected (out-of-state FIN/PSH/URG)." }
+        }
+    ]
+}
