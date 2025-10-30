@@ -33,7 +33,7 @@ VateX NOTITIA extends your threat detection across network traffic, delivering i
 
 ## Sensor Detail
 
-![initial](https://github.com/lastime1650/VATEX_NOTITIA_NDR/blob/main/VATEX_NOTITIA_NDR_SIMPLE.png)
+![initial](https://github.com/lastime1650/VATEX_NOTITIA_NDR/blob/main/VATEX_NDR_SENSOR.png)
 
 ## NDR Detail
 
