@@ -1,0 +1,19 @@
+{
+    "id": "feature-gzip-header-detected",
+    "description": "Detects the presence of a Gzip header (magic bytes 1F 8B) in a payload.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "binary": "1F8B",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Gzip compressed data header detected at the start of the payload." }
+        }
+    ]
+}

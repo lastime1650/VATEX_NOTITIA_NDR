@@ -1,0 +1,27 @@
+{
+    "id": "behavior-small-request-large-response",
+    "description": "Detects a pattern of a small outbound request followed by a very large inbound response, which could indicate data exfiltration.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "Small-Request",
+            "direction": "out",
+            "condition": {
+                "payload": [{ "size": 200, "size_match_method": "<" }]
+            },
+            "goto": "Large-Response"
+        },
+        {
+            "index": "Large-Response",
+            "direction": "in",
+            "condition": {
+                "payload": [{ "size": 1000000, "size_match_method": ">=" }]
+            },
+            "timestamp": { "nano": 10000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Potential data exfiltration pattern detected: a small request was followed by a large response (>1MB)."
+            }
+        }
+    ]
+}

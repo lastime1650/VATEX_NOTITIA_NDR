@@ -1,0 +1,19 @@
+{
+    "id": "feature-pdf-header-detected",
+    "description": "Detects the header of an Adobe PDF document.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "string": "%PDF-",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "PDF document header detected. PDFs can be used for phishing or to deliver exploits." }
+        }
+    ]
+}

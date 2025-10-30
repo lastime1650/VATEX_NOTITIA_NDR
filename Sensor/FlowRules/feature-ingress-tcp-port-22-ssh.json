@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-tcp-port-22-ssh",
+    "description": "Detects an inbound SSH connection attempt to an internal server on TCP port 22.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "tcp": { "dst_port": 22 } },
+            "action": { "type": "notice", "message": "Ingress SSH traffic detected to internal server on TCP port 22." }
+        }
+    ]
+}

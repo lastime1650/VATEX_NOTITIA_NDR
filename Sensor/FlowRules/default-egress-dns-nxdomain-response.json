@@ -1,0 +1,30 @@
+{
+    "id": "default-egress-dns-nxdomain-response",
+    "description": "Detects a DNS response indicating a non-existent domain (NXDOMAIN) for an egress query.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Query",
+            "condition": {
+                "dns": { "is_response": false }
+            },
+            "direction": "out",
+            "goto": "NXDOMAIN-Response"
+        },
+        {
+            "index": "NXDOMAIN-Response",
+            "condition": {
+                "dns": { 
+                    "is_response": true,
+                    "response_code": 3 
+                }
+            },
+            "direction": "in",
+            "timestamp": { "nano": 5000000000 },
+            "action": {
+                "type": "notice",
+                "message": "DNS NXDOMAIN response received for an egress query"
+            }
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "id": "threat-powershell-reflective-assembly-load",
+    "description": "Detects in-memory .NET assembly loading via PowerShell, an advanced fileless technique.",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "\\[System\\.Reflection\\.Assembly\\]::Load"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "PowerShell reflective assembly loading detected. Often used to run tools like Mimikatz in memory." }
+        }
+    ]
+}

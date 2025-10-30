@@ -1,0 +1,32 @@
+{
+    "id": "default-arp-resolution-cycle",
+    "description": "Detects a standard ARP request and its corresponding reply, indicating a successful L2 address resolution on the local network.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Arp-Request",
+            "condition": {
+                "arp": {
+                    "opcode": 1
+                }
+            },
+            "goto": "Arp-Reply"
+        },
+        {
+            "index": "Arp-Reply",
+            "condition": {
+                "arp": {
+                    "opcode": 2
+                }
+            },
+            "timestamp": {
+                "nano": 2000000000
+            },
+            "action": {
+                "type": "notice",
+                "message": "ARP resolution successful"
+            },
+            "goto": "Arp-Request"
+        }
+    ]
+}

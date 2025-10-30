@@ -1,0 +1,6 @@
+{
+    "id": "rule_id",
+    "description" : "rule explain",
+    "severity" : "info, low, medium, high, critical",
+    
+}

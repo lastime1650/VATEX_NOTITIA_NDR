@@ -1,0 +1,18 @@
+{
+    "id": "feature-powershell-execution-signature",
+    "description": "Detects a basic PowerShell execution signature with a command argument.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "powershell(\\.exe)?\\s+(-c|-Command)\\s"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Basic PowerShell execution signature ('powershell -c' or '-Command') detected." }
+        }
+    ]
+}

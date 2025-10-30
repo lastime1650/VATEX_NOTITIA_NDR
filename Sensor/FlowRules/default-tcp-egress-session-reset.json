@@ -1,0 +1,16 @@
+{
+    "id": "default-tcp-egress-session-reset",
+    "description": "Detects an abrupt TCP session termination via an RST flag sent from an internal host.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Rst-Sent",
+            "condition": { "tcp": { "flags": ["R", "A"] }},
+            "direction": "out",
+            "action": {
+                "type": "notice",
+                "message": "Egress TCP session reset (RST sent)"
+            }
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "id": "attack-egress-tcp-null-scan-attempt",
+    "description": "Detects an out-of-state TCP packet with no flags set from an external source, indicating a TCP NULL scan.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "Null-Probe",
+            "direction": "out",
+            "condition": { "tcp": { "flags": [] } },
+            "pre": { "not_complete_ids": ["default-egress-tcp-session-established"] },
+            "action": { "type": "notice", "message": "Egress TCP NULL scan attempt detected (out-of-state no-flags packet)." }
+        }
+    ]
+}

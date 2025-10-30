@@ -1,0 +1,19 @@
+{
+    "id": "feature-java-class-header-detected",
+    "description": "Detects the header of a compiled Java class file.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "binary": "CAFEBABE",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Java class file header ('CAFEBABE') detected. May be related to Java-based exploits or applications." }
+        }
+    ]
+}

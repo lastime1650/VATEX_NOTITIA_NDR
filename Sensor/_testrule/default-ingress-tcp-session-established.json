@@ -1,0 +1,21 @@
+{
+    "id": "default-ingress-tcp-session-established",
+    "description": "Detects a TCP session initiated from the external network (inbound connection).",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Syn",
+            "condition": { "tcp": { "flags": ["S"] }},
+            "direction": "out",
+            "goto": "SynAck"
+        },
+        {
+            "index": "SynAck",
+            "condition": { "tcp": { "flags": ["S", "A"] }},
+            "direction": "in",
+            "timestamp": { "nano": 5000000000 },
+            "goto": "Ack"
+        }
+        
+    ]
+}

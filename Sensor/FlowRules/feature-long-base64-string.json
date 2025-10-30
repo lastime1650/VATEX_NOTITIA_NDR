@@ -1,0 +1,18 @@
+{
+    "id": "feature-long-base64-string",
+    "description": "Detects a long, contiguous Base64 string in a payload, which may indicate an encoded file or command.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "[A-Za-z0-9+/=]{50,}"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Suspiciously long Base64 string detected in payload. Potential command or file obfuscation." }
+        }
+    ]
+}

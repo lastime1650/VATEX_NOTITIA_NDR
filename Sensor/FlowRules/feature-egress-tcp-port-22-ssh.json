@@ -1,0 +1,13 @@
+{
+    "id": "feature-egress-tcp-port-22-ssh",
+    "description": "Detects an outbound SSH connection from an internal client on TCP port 22.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "out",
+            "condition": { "tcp": { "dst_port": 22 } },
+            "action": { "type": "notice", "message": "Egress SSH traffic detected from internal client on TCP port 22." }
+        }
+    ]
+}

@@ -1,0 +1,13 @@
+{
+    "id": "feature-ingress-udp-port-53-dns",
+    "description": "Detects an inbound DNS query to an internal DNS server on UDP port 53.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "in",
+            "condition": { "udp": { "dst_port": 53 } },
+            "action": { "type": "notice", "message": "Ingress DNS query detected to internal DNS server on UDP port 53." }
+        }
+    ]
+}

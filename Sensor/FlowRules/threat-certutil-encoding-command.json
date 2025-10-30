@@ -1,0 +1,18 @@
+{
+    "id": "threat-certutil-encoding-command",
+    "description": "Detects the use of certutil.exe to encode or decode files, a known LOLBin technique.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "certutil(\\.exe)?\\s+(-encode|-decode)"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "LOLBin technique detected: certutil used for file encoding/decoding." }
+        }
+    ]
+}

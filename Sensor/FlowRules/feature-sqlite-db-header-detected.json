@@ -1,0 +1,19 @@
+{
+    "id": "feature-sqlite-db-header-detected",
+    "description": "Detects the header of an SQLite database file.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "string": "SQLite format 3",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "SQLite database file header detected. Could be part of an application's data or exfiltrated information." }
+        }
+    ]
+}

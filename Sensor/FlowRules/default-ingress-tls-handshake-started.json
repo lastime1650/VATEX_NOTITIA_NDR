@@ -1,0 +1,27 @@
+{
+    "id": "default-ingress-tls-handshake-started",
+    "description": "Detects the start of a TLS handshake (Client Hello -> Server Hello) initiated from an external client to an internal server.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Client-Hello",
+            "condition": {
+                "tls": { "handshake_type": "client_hello" }
+            },
+            "direction": "in",
+            "goto": "Server-Hello"
+        },
+        {
+            "index": "Server-Hello",
+            "condition": {
+                "tls": { "handshake_type": "server_hello" }
+            },
+            "direction": "out",
+            "timestamp": { "nano": 5000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Ingress TLS handshake initiated"
+            }
+        }
+    ]
+}

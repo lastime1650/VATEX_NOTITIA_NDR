@@ -1,0 +1,18 @@
+{
+    "id": "feature-long-hex-string",
+    "description": "Detects a long, contiguous hexadecimal string, which may indicate encoded shellcode or binary data.",
+    "severity": "low",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "\\b[0-9a-fA-F]{50,}\\b"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Suspiciously long hexadecimal string detected in payload." }
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "id": "default-egress-http-get-ok-cycle",
+    "description": "Detects successful HTTP GET transactions (200 OK) initiated from the internal network.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Http-Get-Request",
+            "condition": {
+                "http": { "request_method": "GET" }
+            },
+            "direction": "out",
+            "goto": "Http-200-Ok-Response"
+        },
+        {
+            "index": "Http-200-Ok-Response",
+            "condition": {
+                "http": { "response_status_code": 200 }
+            },
+            "direction": "in",
+            "timestamp": { "nano": 10000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Egress HTTP GET transaction successful"
+            },
+            "goto": "Http-Get-Request"
+        }
+    ]
+}

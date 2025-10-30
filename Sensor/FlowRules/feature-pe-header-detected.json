@@ -1,0 +1,22 @@
+{
+    "id": "feature-pe-header-detected",
+    "description": "Detects the presence of a Portable Executable (PE) file header ('MZ') in a packet payload.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "binary": "4D5A",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": {
+                "type": "notice",
+                "message": "PE file header ('MZ') detected in payload. This may indicate the start of an executable file transfer."
+            }
+        }
+    ]
+}

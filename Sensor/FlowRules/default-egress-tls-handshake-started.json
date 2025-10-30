@@ -1,0 +1,27 @@
+{
+    "id": "default-egress-tls-handshake-started",
+    "description": "Detects the start of a TLS handshake (Client Hello -> Server Hello) initiated from the internal network.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Client-Hello",
+            "condition": {
+                "tls": { "handshake_type": "client_hello" }
+            },
+            "direction": "out",
+            "goto": "Server-Hello"
+        },
+        {
+            "index": "Server-Hello",
+            "condition": {
+                "tls": { "handshake_type": "server_hello" }
+            },
+            "direction": "in",
+            "timestamp": { "nano": 5000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Egress TLS handshake initiated"
+            }
+        }
+    ]
+}

@@ -1,0 +1,51 @@
+{
+    "id": "default-egress-tcp-session",
+    "description": "Detects normal TCP 3-way handshake sequence",
+    "severity": "info",
+
+    "sequence": [
+        {
+            "index": "Syn",
+            "condition": {
+                "tcp": {
+                    "flags": ["S"],
+                    "src_port": "any",
+                    "dst_port": "any"
+                }
+            },
+            "direction" : "out",
+            "threshold" : {
+                "pktcount" : 1
+            },
+            "goto" : "Syn+Ack"
+        },
+        {
+            "index": "Syn+Ack",
+            "condition": {
+                "tcp": {
+                    "flags": ["S", "A"]
+                }
+            },
+            "action": {
+                "type": "notice",
+                "message": "TCP session opening"
+            }
+
+        },
+        {
+            "index": "Ack",
+            "condition": {
+                "tcp": {
+                    "flags": ["A"]
+                }
+            },
+            "timestamp": {
+                "nano": 2000000000
+            },
+            "action": {
+                "type": "notice",
+                "message": "TCP 3-way handshake completed"
+            }
+        }
+    ]
+}

@@ -1,0 +1,22 @@
+{
+    "id": "feature-zip-header-detected",
+    "description": "Detects the presence of a ZIP archive header ('PK') in a packet payload.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "string": "PK",
+                        "offset": 0
+                    }
+                ]
+            },
+            "action": {
+                "type": "notice",
+                "message": "ZIP archive header ('PK') detected in payload. This may indicate an archive file transfer."
+            }
+        }
+    ]
+}

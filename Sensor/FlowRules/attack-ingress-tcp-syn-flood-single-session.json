@@ -1,0 +1,19 @@
+{
+    "id": "attack-ingress-tcp-syn-flood-single-session",
+    "description": "Detects a high rate of SYN packets within a single TCP session, indicative of a SYN flood DoS attack.",
+    "severity": "high",
+    "sequence": [
+        {
+            "index": "Syn-Flood",
+            "direction": "in",
+            "condition": { "tcp": { "flags": ["S"] } },
+            "timestamp": { "nano": 1000000000 },
+            "threshold": { "pktcount": 100 },
+            "goto": "Syn-Flood",
+            "action": {
+                "type": "notice",
+                "message": "TCP SYN Flood detected: Over 100 SYN packets received in 1 second for a single session."
+            }
+        }
+    ]
+}

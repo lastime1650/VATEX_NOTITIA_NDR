@@ -1,0 +1,19 @@
+{
+    "id": "attack-ingress-udp-dns-flood",
+    "description": "Detects an abnormally high rate of UDP packets to DNS port 53, indicative of a UDP flood attack.",
+    "severity": "critical",
+    "sequence": [
+        {
+            "index": "Udp-Flood",
+            "direction": "in",
+            "condition": { "udp": { "dst_port": 53 } },
+            "timestamp": { "nano": 1000000000 },
+            "threshold": { "pktcount": 1000 },
+            "goto": "Udp-Flood",
+            "action": {
+                "type": "notice",
+                "message": "UDP DNS Flood detected: Over 1000 packets to UDP port 53 received in 1 second for a single session."
+            }
+        }
+    ]
+}

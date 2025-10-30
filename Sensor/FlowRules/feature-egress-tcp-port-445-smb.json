@@ -1,0 +1,13 @@
+{
+    "id": "feature-egress-tcp-port-445-smb",
+    "description": "Detects an outbound SMB connection from an internal client to an external host on TCP port 445.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "direction": "out",
+            "condition": { "tcp": { "dst_port": 445 } },
+            "action": { "type": "notice", "message": "Egress SMB traffic detected on TCP port 445. This is highly unusual and should be investigated." }
+        }
+    ]
+}

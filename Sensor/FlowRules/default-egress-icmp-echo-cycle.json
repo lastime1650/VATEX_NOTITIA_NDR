@@ -1,0 +1,28 @@
+{
+    "id": "default-egress-icmp-echo-cycle",
+    "description": "Detects ICMP Echo cycles initiated from the internal network to an external host.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Echo-request",
+            "condition": {
+                "icmp": { "type": 8, "code": 0 }
+            },
+            "direction": "out",
+            "goto": "Echo-reply"
+        },
+        {
+            "index": "Echo-reply",
+            "condition": {
+                "icmp": { "type": 0, "code": 0 }
+            },
+            "direction": "in",
+            "timestamp": { "nano": 5000000000 },
+            "action": {
+                "type": "notice",
+                "message": "Egress ICMP Echo cycle completed"
+            },
+            "goto": "Echo-request"
+        }
+    ]
+}

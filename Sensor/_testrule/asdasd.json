@@ -1,0 +1,21 @@
+{
+    "id": "plain-text-hello-detection",
+    "description": "Detects the plain text string 'hello' in the packet payload.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "string": "H"
+                    }
+                ]
+            },
+            "action": {
+                "type": "notice",
+                "message": "Detected 'hello' string in packet payload."
+            }
+        }
+    ]
+}

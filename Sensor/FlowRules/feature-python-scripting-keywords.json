@@ -1,0 +1,18 @@
+{
+    "id": "feature-python-scripting-keywords",
+    "description": "Detects common Python scripting keywords used for system interaction.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "\\b(import os|import socket|import subprocess|sys\\.argv)\\b"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "Python scripting keywords (e.g., 'import os', 'import socket') detected." }
+        }
+    ]
+}

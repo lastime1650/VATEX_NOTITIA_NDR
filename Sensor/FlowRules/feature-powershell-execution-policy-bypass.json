@@ -1,0 +1,18 @@
+{
+    "id": "feature-powershell-execution-policy-bypass",
+    "description": "Detects attempts to bypass the PowerShell execution policy.",
+    "severity": "medium",
+    "sequence": [
+        {
+            "index": "A",
+            "condition": {
+                "payload": [
+                    {
+                        "regex": "(-ExecutionPolicy|-ep)\\s+(Bypass|Unrestricted)"
+                    }
+                ]
+            },
+            "action": { "type": "notice", "message": "PowerShell execution policy bypass attempt detected." }
+        }
+    ]
+}
