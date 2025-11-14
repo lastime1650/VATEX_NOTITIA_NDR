@@ -129,7 +129,7 @@ namespace NDR
 
                     for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
                     {
-                        if (ifa->ifa_name == NULL || strcmp(ifa->ifa_name, "lo") == 0 || (strcmp(ifa->ifa_name, "enp3s0") != 0)) 
+                        if (ifa->ifa_name == NULL || strcmp(ifa->ifa_name, "lo") == 0 || (strcmp(ifa->ifa_name, "enp3s0") != 0 ) )//"enp3s0") != 0))wlp2s0 
                             continue;
 
                         std::string ifname(ifa->ifa_name);
@@ -138,7 +138,7 @@ namespace NDR
 
                         std::cout << ifname << std::endl;
 
-                        if(ifname == "SslMirrorDummy")
+                        //if(ifname == "SslMirrorDummy")
 
                         seen_ifnames.insert(ifname);
 

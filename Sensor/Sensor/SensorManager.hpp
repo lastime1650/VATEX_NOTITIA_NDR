@@ -57,12 +57,13 @@ namespace NDR
 
                     return !is_running ? true : false ;
                 }
+                
 
+                NDR::Sensor::LogSender::Logger& Logger;
+                NDR::Sensor::PacketFlow::PacketFlowManager FlowManger;
 
             private:
-                NDR::Sensor::LogSender::Logger& Logger;
-
-                NDR::Sensor::PacketFlow::PacketFlowManager FlowManger;
+                
 
 
                 bool is_running = false;

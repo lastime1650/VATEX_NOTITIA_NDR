@@ -1,0 +1,18 @@
+{
+    "id": "ssh-initial-connection-detected",
+    "description": "Detects the initial version exchange of an SSH handshake.",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Ssh-Client-Identification",
+            "condition": {
+                "ssh": {
+                    "type": "identification",
+                    "direction": "client_to_server"
+                }
+            },
+            "direction": "out",
+            "goto": "Ssh-Server-Identification"
+        }
+    ]
+}

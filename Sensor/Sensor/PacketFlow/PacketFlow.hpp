@@ -22,10 +22,12 @@ namespace NDR
             {
             public:
                 PacketFlowManager(NDR::Sensor::LogSender::Logger& Logger, std::string FlowRuleDir, std::string PcapSavedDir, std::string CertsDir)
-                : Logger(Logger),
+                : SSL_Manager(CertsDir),
+                
+                Logger(Logger),
                 ToPcap(PcapSavedDir),
                 RuleManager(Logger, FlowRuleDir),
-                SSL_Manager(CertsDir),
+                
                 PacketNetworkSession(Logger, ToPcap, RuleManager)
                 {}
 
@@ -43,8 +45,8 @@ namespace NDR
                         return false;
                     
                     // SSL Proxy Open
-                    if( !SSL_Manager.Run() )
-                        return false;
+                    //if( !SSL_Manager.Run() )
+                        //return false;
 
                     // Ebpf Packet Receive Open
                     if( !Receiver.Run( &PktInfoQueue) ) // 큐 객체 관리는 오로지 "PacketFlowManager" 에서 담당 
@@ -75,11 +77,11 @@ namespace NDR
                                 NDR::Util::timestamp::Get_timespec_by_Timestamp(PktInfo.timestamp, &Ts);
 
                                 // 1. Binary to Packet Object(but Raw!!@@$##%$@#%)
-                                pcpp::RawPacket pcppRawPacket(PacketEvent->RawPacket, PktInfo.RawPacketSize, Ts, false);
+                                auto rawPktPtr = std::make_shared<pcpp::RawPacket>(PacketEvent->RawPacket, PktInfo.RawPacketSize, Ts, false);
                                 //pcppRawPacket.clone()
 
                                 // 2. RawPacket to Packet
-                                pcpp::Packet pcppPacket(&pcppRawPacket);
+                                auto pktPtr = std::make_shared<pcpp::Packet>(&(*rawPktPtr));
 
                                 // 3. Session Processing
                                 //std::cout << "Session_Processing .." << std::endl;
@@ -94,8 +96,8 @@ namespace NDR
                                     PacketEvent->ifindex,
                                     PacketEvent->is_INGRESS,
 
-                                    pcppRawPacket,
-                                    pcppPacket
+                                    rawPktPtr,
+                                    pktPtr
                                 );
                                 //td::cout << "Session_Processing END" << std::endl;
 

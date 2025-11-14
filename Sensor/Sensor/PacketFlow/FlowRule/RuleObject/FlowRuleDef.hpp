@@ -14,6 +14,43 @@
 
 #include "../../../../util/util.hpp" // json, etc.
 
+#include <pcapplusplus/FtpLayer.h>
+#include <pcapplusplus/TelnetLayer.h>
+#include <pcapplusplus/StpLayer.h>
+#include <pcapplusplus/VlanLayer.h>
+#include <pcapplusplus/SllLayer.h>         // Linux cooked capture
+#include <pcapplusplus/NullLoopbackLayer.h>
+#include <pcapplusplus/PacketTrailerLayer.h>
+#include <pcapplusplus/PPPoELayer.h>
+#include <pcapplusplus/VxlanLayer.h>
+#include <pcapplusplus/MplsLayer.h>
+#include <pcapplusplus/StpLayer.h>
+#include <pcapplusplus/WakeOnLanLayer.h>
+#include <pcapplusplus/GreLayer.h>
+#include <pcapplusplus/IcmpV6Layer.h>
+#include <pcapplusplus/NdpLayer.h>
+#include <pcapplusplus/VrrpLayer.h>
+#include <pcapplusplus/WireGuardLayer.h>
+#include <pcapplusplus/CotpLayer.h>
+#include <pcapplusplus/IPSecLayer.h>
+#include <pcapplusplus/GtpLayer.h>
+#include <pcapplusplus/TpktLayer.h>
+#include <pcapplusplus/SdpLayer.h>
+#include <pcapplusplus/SipLayer.h>
+#include <pcapplusplus/DhcpLayer.h>
+#include <pcapplusplus/DhcpV6Layer.h>
+#include <pcapplusplus/FtpLayer.h>
+#include <pcapplusplus/LdapLayer.h>
+#include <pcapplusplus/NtpLayer.h>
+#include <pcapplusplus/RadiusLayer.h>
+#include <pcapplusplus/S7CommLayer.h>
+#include <pcapplusplus/SmtpLayer.h>
+#include <pcapplusplus/SomeIpLayer.h>
+#include <pcapplusplus/TelnetLayer.h>
+#include <pcapplusplus/NdpLayer.h>
+
+#include <pcapplusplus/BgpLayer.h>
+
 #include <pcapplusplus/Packet.h>
 #include <pcapplusplus/TcpLayer.h>
 #include <pcapplusplus/UdpLayer.h>
@@ -28,7 +65,8 @@
 #include <pcapplusplus/SSLHandshake.h>
 #include <pcapplusplus/Layer.h>
 #include <pcapplusplus/IPv6Layer.h>
-
+#include <pcapplusplus/PayloadLayer.h>
+#include <pcapplusplus/SSHLayer.h>
 
 /*
 Example
@@ -113,65 +151,76 @@ namespace NDR
                     constexpr const char* HTTP     = "http";
                     constexpr const char* TLS      = "tls";
                     constexpr const char* PAYLOAD      = "payload"; // 해석되지 못한 데이터 바이너리들
+                    constexpr const char* SSH      = "ssh"; 
+
+                     constexpr const char* VLAN     = "vlan";
+                    constexpr const char* SLL      = "sll";
+                    constexpr const char* NULL_LOOPBACK = "null_loopback";
+                    constexpr const char* PPPOE    = "pppoe";
+                    constexpr const char* VXLAN    = "vxlan";
+                    constexpr const char* MPLS     = "mpls";
+                    constexpr const char* GRE      = "gre";
+                    constexpr const char* ICMPV6   = "icmpv6";
+                    constexpr const char* NDP      = "ndp";
+                    constexpr const char* VRRP     = "vrrp";
+                    constexpr const char* WIREGUARD= "wireguard";
+                    constexpr const char* IPSEC    = "ipsec";
+                    constexpr const char* GTP      = "gtp";
+                    constexpr const char* SIP      = "sip";
+                    constexpr const char* DHCP     = "dhcp";
+                    constexpr const char* FTP      = "ftp";
+                    constexpr const char* TELNET   = "telnet";
+                    constexpr const char* NTP      = "ntp";
+                    constexpr const char* SMTP     = "smtp";
+                    constexpr const char* RADIUS   = "radius";
+                    constexpr const char* LDAP     = "ldap";
+
                 }
                 // ---------------------------
                 // 프로토콜별 필드 정의
                 // ---------------------------
 
                 static const std::unordered_map<std::string, std::vector<std::string>> ProtocolFieldMap = {
-                    // Ethernet (L2)
-                    {
-                        ProtocolKey::ETHERNET,
-                        {"src", "dst", "type"}
-                    },
-                    // IP (L3)
-                    {
-                        ProtocolKey::IP,
-                        {"version", "src_ip", "dst_ip", "protocol", "ttl", "tos", "length", "id", "flags", "fragment_offset"}
-                    },
-                    // TCP (L4)
-                    {
-                        ProtocolKey::TCP,
-                        {"src_port", "dst_port", "flags", "seq", "ack", "window", "payload_size", "options"}
-                    },
-                    // UDP (L4)
-                    {
-                        ProtocolKey::UDP,
-                        {"src_port", "dst_port", "length", "payload_size"}
-                    },
-                    // ICMP
-                    {
-                        ProtocolKey::ICMP,
-                        {"type", "code", "id", "seq"}
-                    },
-                    // ARP
-                    {
-                        ProtocolKey::ARP,
-                        {"opcode", "src_ip", "src_mac", "dst_ip", "dst_mac"}
-                    },
-                    // DNS
-                    {
-                        ProtocolKey::DNS,
-                        {"opcode", "query_name", "query_name_contains", "query_type", "query_class", "is_response", "response_code", "answer_count", "answer_name", "answer_type", "answer_data", "answer_data_contains", "ttl", "domain_suffix", "domain_prefix", "length_query_name", "entropy_query_name"}
-                    },
-                    // HTTP
-                    {
-                        ProtocolKey::HTTP,
-                        {
-                            "request_method", "request_uri", "request_uri_contains", "request_header", "request_body_contains",
-                            "response_status_code", "response_reason_phrase", "response_content_type", "response_server", "response_set_cookie", "response_header", "response_body_contains"
-                        }
-                    },
-                    // TLS
-                    {
-                        ProtocolKey::TLS,
-                        {"version", "handshake_type", "sni", "cipher_suites"}
-                    },
+                     { ProtocolKey::ETHERNET, {"src", "dst", "type"}},
+                    { ProtocolKey::IP, {"version", "src_ip", "dst_ip", "protocol", "ttl", "tos", "length", "id", "flags", "fragment_offset"}},
+                    { ProtocolKey::TCP, {"src_port", "dst_port", "flags", "seq", "ack", "window", "payload_size", "options"}},
+                    { ProtocolKey::UDP, {"src_port", "dst_port", "length", "payload_size"}},
+                    { ProtocolKey::ICMP, {"type", "code", "id", "seq"}},
+                    { ProtocolKey::ARP, {"opcode", "src_ip", "src_mac", "dst_ip", "dst_mac"}},
+                    { ProtocolKey::DNS, {"opcode", "query_name", "query_name_contains", "query_type", "query_class", "is_response", "response_code", "answer_count", "answer_name", "answer_type", "answer_data", "answer_data_contains", "ttl", "domain_suffix", "domain_prefix", "length_query_name", "entropy_query_name"}},
+                    { ProtocolKey::HTTP, {"request_method", "request_uri", "request_uri_contains", "request_header", "request_body_contains", "response_status_code", "response_reason_phrase", "response_content_type", "response_server", "response_set_cookie", "response_header", "response_body_contains"}},
+                    { ProtocolKey::TLS, {"version", "handshake_type", "sni", "cipher_suites"}},
+                    { ProtocolKey::SSH, { "type", "direction", "client_version", "server_version", "version_contains", "kex_algorithms_contains", "server_host_key_algorithms_contains", "encryption_algorithms_c2s_contains", "encryption_algorithms_s2c_contains", "mac_algorithms_c2s_contains", "mac_algorithms_s2c_contains" }},
+                    { ProtocolKey::PAYLOAD, { "size", "size_match_method", "binary", "offset", "string", "regex" }},
+
+                    // --- Newly Added Protocols ---
+                    { ProtocolKey::VLAN, {"id", "priority", "dei"}},
+                    { ProtocolKey::SLL, {"packet_type", "addr_type"}},
+                    { ProtocolKey::NULL_LOOPBACK, {"protocol_type"}},
+                    { ProtocolKey::PPPOE, {"type", "session_id", "code", "ppp_protocol"}},
+                    { ProtocolKey::VXLAN, {"vni"}},
+                    { ProtocolKey::MPLS, {"label", "ttl", "tc", "is_bottom_of_stack"}},
+                    { ProtocolKey::GRE, {"version", "protocol_type", "seq_number", "ack_number"}},
+                    { ProtocolKey::ICMPV6, {"type", "code"}},
+                    { ProtocolKey::NDP, {"type", "target_address"}},
+                    { ProtocolKey::VRRP, {"version", "type", "vrid"}},
+                    { ProtocolKey::WIREGUARD, {"message_type", "sender_index", "receiver_index"}},
+                    { ProtocolKey::IPSEC, {"type", "spi", "seq_number"}},
+                    { ProtocolKey::GTP, {"version", "message_type", "teid"}},
+                    { ProtocolKey::SIP, {"type", "method", "status_code", "uri_contains", "header_contains"}},
+                    { ProtocolKey::DHCP, {"message_type", "op_code"}},
+                    { ProtocolKey::FTP, {"type", "command", "status_code", "message_contains"}},
+                    { ProtocolKey::TELNET, {"command", "data_contains"}},
+                    { ProtocolKey::NTP, {"mode", "stratum", "leap_indicator"}},
+                    { ProtocolKey::SMTP, {"command", "data_contains"}},
+                    { ProtocolKey::RADIUS, {"code", "id"}},
+                    { ProtocolKey::LDAP, {"op_code", "message_id"}}
+                    /*
                     // PAYLOAD ( None-Parsed Layer )
                     {
                         ProtocolKey::PAYLOAD,
                         {
-                           /*
+                           
                                 A - 사용예시 (페이로드 크기가 500바이트보다 크고, "evil" 문자열(hex: 6576696c)을 포함하는 패킷)
                                 "payload": [
                                     { "size": 500, "size_match_method": ">" },
@@ -195,7 +244,7 @@ namespace NDR
                                     { "size": 100, "size_match_method": ">=" },
                                     { "regex": "('|\"|;|--|\\/\\*).*?(UNION|SELECT|INSERT|UPDATE|DELETE)" }
                                 ]
-                           */
+                           
                             "size",
                             "size_match_method", 
                             "binary",
@@ -203,7 +252,7 @@ namespace NDR
                             "string",
                             "regex"
                         }
-                    }
+                    }*/
                 };
 
                 namespace ConditionLogic
@@ -297,20 +346,51 @@ namespace NDR
 
                         bool Match(const pcpp::Packet& pkt) override
                         {
-                            
-                            const uint8_t* payload_data = nullptr;
-                            size_t payload_len = 0;
-                            pcpp::Layer* payloadContainer = pkt.getLayerOfType<pcpp::TcpLayer>() ? pkt.getLayerOfType<pcpp::TcpLayer>() :
-                                                        pkt.getLayerOfType<pcpp::UdpLayer>() ? pkt.getLayerOfType<pcpp::UdpLayer>() :
-                                                        pkt.getLayerOfType<pcpp::IcmpLayer>() ? pkt.getLayerOfType<pcpp::IcmpLayer>() :
-                                                        pkt.getLayerOfType<pcpp::IPv6Layer>() ? pkt.getLayerOfType<pcpp::IPv6Layer>() :
-                                                        static_cast<pcpp::Layer*>(pkt.getLayerOfType<pcpp::IPv4Layer>());
-                            if (payloadContainer) {
-                                
-                                payload_data = payloadContainer->getLayerPayload();
-                                payload_len = payloadContainer->getLayerPayloadSize();
+                            // --- 수정 시작 ---
+                            // 이전의 페이로드 컨테이너 탐색 방식은 안정적이지 않았습니다.
+                            // pcpp::Packet::getLayerPayload()는 파싱되지 못한 최상위 레이어의 페이로드를
+                            // 가져오는 올바르고 안전한 방법입니다. "PAYLOAD" 조건이 검사해야 할 대상이 바로 이것입니다.
+
+                            pcpp::PayloadLayer* payloadLayer = pkt.getLayerOfType<pcpp::PayloadLayer>();
+                            if (payloadLayer == nullptr) {
+                                return false;
                             }
-                            
+
+                            const uint8_t* payload_data = payloadLayer->getPayload();
+                            size_t payload_len = payloadLayer->getPayloadLen();
+
+                            // 페이로드가 전혀 없는 경우, 내용 기반 규칙은 매칭될 수 없습니다.
+                            if (payload_data == nullptr || payload_len == 0)
+                            {
+                                // 하지만 size: 0 과 같은 규칙은 매칭될 수 있으므로 확인해야 합니다.
+                                // 내용(binary, string, regex)이나 0이 아닌 크기를 요구하는 규칙은 실패해야 합니다.
+                                bool can_match_empty = true;
+                                for (const auto& p_cond : conditions)
+                                {
+                                    if (p_cond.binary_pattern.has_value() || p_cond.regex_pattern.has_value()) {
+                                        can_match_empty = false;
+                                        break;
+                                    }
+                                    if (p_cond.size.has_value()) {
+                                        // size 조건이 payload_len = 0으로 충족될 수 있는지 확인
+                                        size_t rule_size = p_cond.size.value();
+                                        switch (p_cond.method)
+                                        {
+                                            case SizeMatchMethod::EQ:  if (0 != rule_size) { can_match_empty = false; } break;
+                                            case SizeMatchMethod::GT:  can_match_empty = false; break; // 0 > size 는 항상 거짓
+                                            case SizeMatchMethod::LT:  if (0 >= rule_size) { can_match_empty = false; } break;
+                                            case SizeMatchMethod::GTE: if (0 < rule_size)  { can_match_empty = false; } break;
+                                            case SizeMatchMethod::LTE: /* 0 <= size 는 항상 참 */ break;
+                                            case SizeMatchMethod::NE:  if (0 == rule_size) { can_match_empty = false; } break;
+                                        }
+                                        if (!can_match_empty) break;
+                                    }
+                                }
+                                // size:0 과 같은 조건이 매칭될 때만 true를 반환
+                                return can_match_empty;
+                            }
+                            // --- 수정 끝 ---
+
                             for (const auto& p_cond : conditions)
                             {
                                 if (p_cond.size.has_value())
@@ -328,29 +408,19 @@ namespace NDR
                                     if (!size_ok) return false;
                                 }
 
-                                // [FIX] Offset logic moved here to apply to both binary and regex matching
                                 const uint8_t* search_start = payload_data;
                                 size_t search_len = payload_len;
 
                                 if (p_cond.offset.has_value())
                                 {
                                     size_t offset = p_cond.offset.value();
-                                    if (offset >= payload_len) return false; // Offset is out of bounds
+                                    if (offset >= payload_len) return false;
                                     search_start += offset;
                                     search_len -= offset;
                                 }
 
                                 if (p_cond.binary_pattern.has_value())
                                 {
-                                    if (payloadContainer->getProtocol() == 4)
-                                    {   
-                                        pcpp::TcpLayer* tcp = (pcpp::TcpLayer*)payloadContainer;
-                                        if( ntohs(tcp->getTcpHeader()->portDst) == 53 )
-                                        {
-                                            std::cout << "\nTELNET ~!!!!@!@!@!@!@!!@V\n" << std::string(p_cond.binary_pattern.value().begin(), p_cond.binary_pattern.value().end() ) << std::endl;
-                                        }
-
-                                    }
                                     const auto& pattern = p_cond.binary_pattern.value();
                                     if (pattern.empty() || search_len == 0 || pattern.size() > search_len) return false;
 
@@ -368,6 +438,7 @@ namespace NDR
                                 {
                                     if (search_len == 0) return false;
                                     
+                                    // 올바른 payload_len 값으로 이 호출은 이제 안전합니다.
                                     if (!std::regex_search(
                                             reinterpret_cast<const char*>(search_start),
                                             reinterpret_cast<const char*>(search_start + search_len),
@@ -613,39 +684,51 @@ namespace NDR
                         }
 
                     private:
-                        bool MatchMessage(pcpp::SSLHandshakeMessage* msg)
-                        {
-                            if (handshake_type.has_value())
-                            {
+                        bool MatchMessage(pcpp::SSLHandshakeMessage* msg) {
+                            // 핸드셰이크 타입 검사
+                            if (handshake_type.has_value()) {
                                 std::string msgTypeStr = handshakeTypeToString(msg->getHandshakeType());
-                                if (!iequals(handshake_type.value(), msgTypeStr))
-                                {
+                                if (!iequals(handshake_type.value(), msgTypeStr)) {
                                     return false;
                                 }
                             }
 
-                            if (pcpp::SSLClientHelloMessage* clientHello = dynamic_cast<pcpp::SSLClientHelloMessage*>(msg))
-                            {
-                                if (version.has_value())
-                                {
+                            // Client Hello 메시지 처리
+                            if (pcpp::SSLClientHelloMessage* clientHello = 
+                                dynamic_cast<pcpp::SSLClientHelloMessage*>(msg)) {
+                                
+                                // 버전 검사
+                                if (version.has_value()) {
                                     pcpp::SSLVersion versionObj = clientHello->getHandshakeVersion();
-                                    if (!iequals(versionObj.toString(), version.value()))
+                                    if (!iequals(versionObj.toString(), version.value())) 
                                         return false;
                                 }
-                                
-                                if (cipher_suites.has_value())
-                                {
-                                    for (const auto& rule_suite_name : cipher_suites.value())
-                                    {
+
+                                // SNI 검사 (추가된 부분)
+                                if (sni.has_value()) {
+                                    pcpp::SSLServerNameIndicationExtension* sniExt = 
+                                        clientHello->getExtensionOfType<pcpp::SSLServerNameIndicationExtension>();
+                                    
+                                    if (!sniExt) {
+                                        // SNI 확장이 없으면 매칭 실패
+                                        return false;
+                                    }
+                                    
+                                    std::string pkt_sni = sniExt->getHostName();
+                                    if (pkt_sni.empty() || !iequals(pkt_sni, sni.value())) {
+                                        return false;
+                                    }
+                                }
+
+                                // Cipher Suites 검사
+                                if (cipher_suites.has_value()) {
+                                    for (const auto& rule_suite_name : cipher_suites.value()) {
                                         bool found = false;
-                                        for (size_t j = 0; j < clientHello->getCipherSuiteCount(); ++j)
-                                        {
+                                        for (size_t j = 0; j < clientHello->getCipherSuiteCount(); ++j) {
                                             pcpp::SSLCipherSuite* pkt_suite = clientHello->getCipherSuite(j);
-                                            if (pkt_suite)
-                                            {
+                                            if (pkt_suite) {
                                                 std::string suiteName = pkt_suite->asString();
-                                                if (iequals(suiteName, rule_suite_name))
-                                                {
+                                                if (iequals(suiteName, rule_suite_name)) {
                                                     found = true;
                                                     break;
                                                 }
@@ -654,40 +737,50 @@ namespace NDR
                                         if (!found) return false;
                                     }
                                 }
+                                
                                 return true;
                             }
 
-                            if (pcpp::SSLServerHelloMessage* serverHello = dynamic_cast<pcpp::SSLServerHelloMessage*>(msg))
-                            {
-                                if (version.has_value())
-                                {
+                            // Server Hello 메시지 처리 (SNI는 일반적으로 Client Hello에만 있음)
+                            if (pcpp::SSLServerHelloMessage* serverHello = 
+                                dynamic_cast<pcpp::SSLServerHelloMessage*>(msg)) {
+                                
+                                // 버전 검사
+                                if (version.has_value()) {
                                     pcpp::SSLVersion versionObj = serverHello->getHandshakeVersion();
-                                    if (!iequals(versionObj.toString(), version.value()))
+                                    if (!iequals(versionObj.toString(), version.value())) 
                                         return false;
                                 }
-                                
-                                if (cipher_suites.has_value())
-                                {
+
+                                // Cipher Suite 검사
+                                if (cipher_suites.has_value()) {
                                     pcpp::SSLCipherSuite* chosenSuite = serverHello->getCipherSuite();
                                     if (!chosenSuite) return false;
-
+                                    
                                     std::string chosenSuiteName = chosenSuite->asString();
                                     bool found = false;
-                                    for (const auto& rule_suite_name : cipher_suites.value())
-                                    {
-                                        if (iequals(chosenSuiteName, rule_suite_name))
-                                        {
+                                    for (const auto& rule_suite_name : cipher_suites.value()) {
+                                        if (iequals(chosenSuiteName, rule_suite_name)) {
                                             found = true;
                                             break;
                                         }
                                     }
                                     if (!found) return false;
                                 }
+
+                                // Server Hello에서 SNI를 요구하면 매칭 실패
+                                if (sni.has_value()) {
+                                    return false;
+                                }
+                                
                                 return true;
                             }
-                            
-                            if (handshake_type.has_value() && !sni.has_value() && !version.has_value() && !cipher_suites.has_value())
-                            {
+
+                            // 다른 핸드셰이크 타입 (handshake_type만 지정된 경우)
+                            if (handshake_type.has_value() && 
+                                !sni.has_value() && 
+                                !version.has_value() && 
+                                !cipher_suites.has_value()) {
                                 return true;
                             }
 
@@ -1103,7 +1196,853 @@ namespace NDR
                         void _set_destination_port(const json& val) { if (val.is_string() && val.get<std::string>() == "any") destination_port = ANY_PORT; else destination_port = val.get<unsigned long>(); }
                         void _set_payload_size(const json& val) { if (val.is_number_unsigned()) payload_size = val.get<size_t>(); }
                     };
+
+
+
+                    /* SSH (Supports Identification and Key Exchange Init messages)
+                        - Direction is inferred from TCP ports.
+                        - Supports detailed field matching for KEX messages.
+                        Example 1 (Detect specific client version):
+                        "ssh": {
+                            "type": "identification",
+                            "client_version": "SSH-2.0-OpenSSH_8.2p1"
+                        }
+                        Example 2 (Detect weak cipher in KEX from client):
+                        "ssh": {
+                            "type": "kex_init",
+                            "direction": "client_to_server",
+                            "encryption_algorithms_c2s_contains": "arcfour"
+                        }
+                        Example 3 (Detect specific KEX algorithm):
+                        "ssh": {
+                            "type": "kex_init",
+                            "kex_algorithms_contains": "diffie-hellman-group1-sha1"
+                        }
+                    */
+                    class ConditionSSHObject : public ConditionObjectBase
+                    {
+                    public:
+                        explicit ConditionSSHObject(const json& sshCond)
+                        {
+                            std::cout << "SSH RULE DETECTED" << std::endl;
+                            for (auto& [k, v] : sshCond.items())
+                            {
+                                if (k == "type") message_type = v.get<std::string>();
+                                else if (k == "direction")
+                                {
+                                    std::string dir_str = v.get<std::string>();
+                                    if (dir_str == "client_to_server") direction = RuleDirection::C2S;
+                                    else if (dir_str == "server_to_client") direction = RuleDirection::S2C;
+                                }
+                                // Identification Message Fields
+                                else if (k == "client_version") client_version = v.get<std::string>();
+                                else if (k == "server_version") server_version = v.get<std::string>();
+                                else if (k == "version_contains") version_contains = v.get<std::string>();
+                                // Key Exchange Init Message Fields
+                                else if (k == "kex_algorithms_contains") kex_algorithms_contains = v.get<std::string>();
+                                else if (k == "server_host_key_algorithms_contains") server_host_key_algorithms_contains = v.get<std::string>();
+                                else if (k == "encryption_algorithms_c2s_contains") encryption_algorithms_c2s_contains = v.get<std::string>();
+                                else if (k == "encryption_algorithms_s2c_contains") encryption_algorithms_s2c_contains = v.get<std::string>();
+                                else if (k == "mac_algorithms_c2s_contains") mac_algorithms_c2s_contains = v.get<std::string>();
+                                else if (k == "mac_algorithms_s2c_contains") mac_algorithms_s2c_contains = v.get<std::string>();
+                                else
+                                    std::cerr << "[WARN] Unknown SSH condition field: " << k << std::endl;
+                            }
+                        }
+
+                        bool Match(const pcpp::Packet& pkt) override
+                        {
+                            pcpp::SSHLayer* ssh = pkt.getLayerOfType<pcpp::SSHLayer>();
+                            if (!ssh) return false;
+                            // 1. Match Identification Message
+                            if (auto id = dynamic_cast<pcpp::SSHIdentificationMessage*>(ssh))
+                            {
+                                // 규칙이 "identification" 타입을 명시했거나, 타입 명시가 없을 때만 진행
+                                if (message_type.has_value() && message_type.value() != "identification")
+                                    return false;
+                                return MatchIdentification(id, pkt);
+                            }
+                            // 2. Match Key Exchange Init Message
+                            else if (auto kex = dynamic_cast<pcpp::SSHKeyExchangeInitMessage*>(ssh))
+                            {
+                                // 규칙이 "kex_init" 타입을 명시했거나, 타입 명시가 없을 때만 진행
+                                if (message_type.has_value() && message_type.value() != "kex_init")
+                                    return false;
+                                return MatchKexInit(kex, pkt);
+                            }
+                            // 다른 SSH 메시지 타입(Handshake, Encrypted)은 현재 규칙으로 지원하지 않음
+                            return false;
+                        }
+
+                    private:
+                        // Helper for checking if a substring exists in a comma-separated list
+                        static bool list_contains(const std::string& list, const std::string& value)
+                        {
+                            if (list.empty() || value.empty()) return false;
+                            
+                            // To avoid partial matches (e.g., "sha1" in "sha128"), we check with commas
+                            // This is a simplified check. For robustness, one might split the string.
+                            return list.find(value) != std::string::npos;
+                        }
+
+                        bool MatchIdentification(pcpp::SSHIdentificationMessage* id, const pcpp::Packet& pkt)
+                        {
+                            // Identification 메시지에 대한 규칙 필드가 하나라도 있는지 확인
+                            if (!client_version && !server_version && !version_contains && !direction)
+                                return false;
+
+                            pcpp::TcpLayer* tcp = pkt.getLayerOfType<pcpp::TcpLayer>();
+                            if (!tcp) return false;
+
+                            enum class PacketDirection { UNKNOWN, C2S, S2C };
+                            PacketDirection packetDir = PacketDirection::UNKNOWN;
+                            if (ntohs(tcp->getTcpHeader()->portDst) == 22) packetDir = PacketDirection::C2S;
+                            else if (ntohs(tcp->getTcpHeader()->portSrc) == 22) packetDir = PacketDirection::S2C;
+
+                            if (direction.has_value())
+                            {
+                                if (direction.value() == RuleDirection::C2S && packetDir != PacketDirection::C2S) return false;
+                                if (direction.value() == RuleDirection::S2C && packetDir != PacketDirection::S2C) return false;
+                            }
+
+                            std::string pkt_version_string = id->getIdentificationMessage();
+                            std::cout << "SSH : pkt_version_string : " << pkt_version_string << std::endl;
+                            
+                            if (client_version.has_value() && (packetDir != PacketDirection::C2S || pkt_version_string != client_version.value())) return false;
+                            if (server_version.has_value() && (packetDir != PacketDirection::S2C || pkt_version_string != server_version.value())) return false;
+                            if (version_contains.has_value() && pkt_version_string.find(version_contains.value()) == std::string::npos) return false;
+
+                            return true;
+                        }
+
+                        bool MatchKexInit(pcpp::SSHKeyExchangeInitMessage* kex, const pcpp::Packet& pkt)
+                        {
+                            // KEX 메시지에 대한 규칙 필드가 하나라도 있는지 확인
+                            if (!kex_algorithms_contains && !server_host_key_algorithms_contains &&
+                                !encryption_algorithms_c2s_contains && !encryption_algorithms_s2c_contains &&
+                                !mac_algorithms_c2s_contains && !mac_algorithms_s2c_contains && !direction)
+                                return false;
+
+                            pcpp::TcpLayer* tcp = pkt.getLayerOfType<pcpp::TcpLayer>();
+                            if (!tcp) return false;
+
+                            enum class PacketDirection { UNKNOWN, C2S, S2C };
+                            PacketDirection packetDir = PacketDirection::UNKNOWN;
+                            if (ntohs(tcp->getTcpHeader()->portDst) == 22) packetDir = PacketDirection::C2S;
+                            else if (ntohs(tcp->getTcpHeader()->portSrc) == 22) packetDir = PacketDirection::S2C;
+
+                            if (direction.has_value())
+                            {
+                                if (direction.value() == RuleDirection::C2S && packetDir != PacketDirection::C2S) return false;
+                                if (direction.value() == RuleDirection::S2C && packetDir != PacketDirection::S2C) return false;
+                            }
+
+                            if (kex_algorithms_contains.has_value() && !list_contains(kex->getKeyExchangeAlgorithms(), kex_algorithms_contains.value())) return false;
+                            if (server_host_key_algorithms_contains.has_value() && !list_contains(kex->getServerHostKeyAlgorithms(), server_host_key_algorithms_contains.value())) return false;
+                            if (encryption_algorithms_c2s_contains.has_value() && !list_contains(kex->getEncryptionAlgorithmsClientToServer(), encryption_algorithms_c2s_contains.value())) return false;
+                            if (encryption_algorithms_s2c_contains.has_value() && !list_contains(kex->getEncryptionAlgorithmsServerToClient(), encryption_algorithms_s2c_contains.value())) return false;
+                            if (mac_algorithms_c2s_contains.has_value() && !list_contains(kex->getMacAlgorithmsClientToServer(), mac_algorithms_c2s_contains.value())) return false;
+                            if (mac_algorithms_s2c_contains.has_value() && !list_contains(kex->getMacAlgorithmsServerToClient(), mac_algorithms_s2c_contains.value())) return false;
+
+                            return true;
+                        }
+
+                        enum class RuleDirection { C2S, S2C };
+                        
+                        // Common fields
+                        std::optional<std::string> message_type;
+                        std::optional<RuleDirection> direction;
+                        
+                        // Identification Message fields
+                        std::optional<std::string> client_version;
+                        std::optional<std::string> server_version;
+                        std::optional<std::string> version_contains;
+
+                        // Key Exchange Init Message fields
+                        std::optional<std::string> kex_algorithms_contains;
+                        std::optional<std::string> server_host_key_algorithms_contains;
+                        std::optional<std::string> encryption_algorithms_c2s_contains;
+                        std::optional<std::string> encryption_algorithms_s2c_contains;
+                        std::optional<std::string> mac_algorithms_c2s_contains;
+                        std::optional<std::string> mac_algorithms_s2c_contains;
+                    };
+
+
+
+                    /*
+                        VLAN
+                        "vlan": { "id": 100, "priority": 5 }
+                    */
+                    class ConditionVLANObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionVLANObject(const json& cond) {
+                            if (cond.contains("id")) id = cond["id"].get<uint16_t>();
+                            if (cond.contains("priority")) priority = cond["priority"].get<uint8_t>();
+                            // DEI is the modern name for CFI
+                            if (cond.contains("dei")) dei = cond["dei"].get<uint8_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::VlanLayer* vlan = pkt.getLayerOfType<pcpp::VlanLayer>();
+                            if (!vlan) return false;
+                            if (id.has_value() && vlan->getVlanID() != id.value()) return false;
+                            if (priority.has_value() && vlan->getPriority() != priority.value()) return false;
+                            // Use getCFI() to check the DEI bit
+                            if (dei.has_value() && vlan->getCFI() != dei.value()) return false;
+                            return true;
+                        }
+                    private:
+                        std::optional<uint16_t> id;
+                        std::optional<uint8_t> priority, dei;
+                    };
+
+                    /*
+                        Linux Cooked Capture (SLL)
+                        "sll": { "packet_type": 0 } // 0: unicast to us
+                    */
+                    class ConditionSLLObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionSLLObject(const json& cond) {
+                            if (cond.contains("packet_type")) packet_type = cond["packet_type"].get<uint16_t>();
+                            if (cond.contains("addr_type")) addr_type = cond["addr_type"].get<uint16_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::SllLayer* sll = pkt.getLayerOfType<pcpp::SllLayer>();
+                            if (!sll) return false;
+                            if (packet_type.has_value() && ntohs(sll->getSllHeader()->packet_type) != packet_type.value()) return false;
+                            if (addr_type.has_value() && ntohs(sll->getSllHeader()->ARPHRD_type) != addr_type.value()) return false;
+                            return true;
+                        }
+                    private:
+                        std::optional<uint16_t> packet_type, addr_type;
+                    };
+
+                    /*
+                        Null/Loopback
+                        "null_loopback": { "protocol_type": 2 } // 2: IP
+                    */
+                    class ConditionNullLoopbackObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionNullLoopbackObject(const json& cond) {
+                            // "protocol_type" is a more generic name for "family" in the rule
+                            if (cond.contains("protocol_type")) protocol_type = cond["protocol_type"].get<uint32_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::NullLoopbackLayer* null_lb = pkt.getLayerOfType<pcpp::NullLoopbackLayer>();
+                            if (!null_lb) return false;
+                            // Use getFamily() as per the header file
+                            if (protocol_type.has_value() && null_lb->getFamily() != protocol_type.value()) return false;
+                            return true;
+                        }
+                    private:
+                        std::optional<uint32_t> protocol_type;
+                    };
+
+                    /*
+                        PPPoE
+                        "pppoe": { "type": "session", "session_id": 1234 }
+                        "pppoe": { "type": "discovery", "code": 9 } // PADI
+                    */
+                    class ConditionPPPoEObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionPPPoEObject(const json& cond) {
+                            if (cond.contains("type")) type = cond["type"].get<std::string>();
+                            if (cond.contains("session_id")) session_id = cond["session_id"].get<uint16_t>();
+                            if (cond.contains("code")) code = cond["code"].get<uint8_t>();
+                            if (cond.contains("ppp_protocol")) ppp_protocol = cond["ppp_protocol"].get<uint16_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            // First, try to get the layer as a session layer
+                            if (auto session = pkt.getLayerOfType<pcpp::PPPoESessionLayer>()) {
+                                if (type.has_value() && type.value() != "session") return false;
+                                // Session ID is in the base header, accessed via getPPPoEHeader()
+                                if (session_id.has_value() && ntohs(session->getPPPoEHeader()->sessionId) != session_id.value()) return false;
+                                if (ppp_protocol.has_value() && session->getPPPNextProtocol() != ppp_protocol.value()) return false;
+                                // 'code' is not relevant for session layer in this context
+                                if (code.has_value()) return false;
+                                return true;
+                            }
+                            // If not a session layer, try to get it as a discovery layer
+                            if (auto discovery = pkt.getLayerOfType<pcpp::PPPoEDiscoveryLayer>()) {
+                                if (type.has_value() && type.value() != "discovery") return false;
+                                if (session_id.has_value() && ntohs(discovery->getPPPoEHeader()->sessionId) != session_id.value()) return false;
+                                if (code.has_value() && discovery->getPPPoEHeader()->code != code.value()) return false;
+                                // 'ppp_protocol' is not relevant for discovery layer
+                                if (ppp_protocol.has_value()) return false;
+                                return true;
+                            }
+                            return false;
+                        }
+                    private:
+                        std::optional<std::string> type;
+                        std::optional<uint16_t> session_id, ppp_protocol;
+                        std::optional<uint8_t> code;
+                    };
+                    
+                    /*
+                        VXLAN
+                        "vxlan": { "vni": 4096 }
+                    */
+                    class ConditionVXLANObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionVXLANObject(const json& cond) {
+                            if (cond.contains("vni")) vni = cond["vni"].get<uint32_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::VxlanLayer* vxlan = pkt.getLayerOfType<pcpp::VxlanLayer>();
+                            if (!vxlan) return false;
+                            if (vni.has_value() && vxlan->getVNI() != vni.value()) return false;
+                            return true;
+                        }
+                    private:
+                        std::optional<uint32_t> vni;
+                    };
+
+                    /*
+                        MPLS
+                        "mpls": { "label": 1001, "is_bottom_of_stack": true }
+                    */
+                    class ConditionMPLSObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionMPLSObject(const json& cond) {
+                            if (cond.contains("label")) label = cond["label"].get<uint32_t>();
+                            if (cond.contains("ttl")) ttl = cond["ttl"].get<uint8_t>();
+                            if (cond.contains("tc")) tc = cond["tc"].get<uint8_t>();
+                            if (cond.contains("is_bottom_of_stack")) is_bottom_of_stack = cond["is_bottom_of_stack"].get<bool>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::MplsLayer* mpls = pkt.getLayerOfType<pcpp::MplsLayer>();
+                            if (!mpls) return false;
+                            if (label.has_value() && mpls->getMplsLabel() != label.value()) return false;
+                            if (ttl.has_value() && mpls->getTTL() != ttl.value()) return false;
+                            if (tc.has_value() && mpls->getExperimentalUseValue() != tc.value()) return false;
+                            if (is_bottom_of_stack.has_value() && mpls->isBottomOfStack() != is_bottom_of_stack.value()) return false;
+                            return true;
+                        }
+                    private:
+                        std::optional<uint32_t> label;
+                        std::optional<uint8_t> ttl, tc;
+                        std::optional<bool> is_bottom_of_stack;
+                    };
+
+                    /*
+                        GRE
+                        "gre": { "version": 0, "protocol_type": 2048 } // 0x0800 IP
+                    */
+                    class ConditionGREObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionGREObject(const json& cond) {
+                            if (cond.contains("version")) version = cond["version"].get<uint8_t>();
+                            if (cond.contains("protocol_type")) protocol_type = cond["protocol_type"].get<uint16_t>();
+                            if (cond.contains("seq_number")) seq_number = cond["seq_number"].get<uint32_t>();
+                            if (cond.contains("ack_number")) ack_number = cond["ack_number"].get<uint32_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::GreLayer* gre = pkt.getLayerOfType<pcpp::GreLayer>();
+                            if (!gre) return false;
+
+                            // Check version first
+                            if (auto grev0 = dynamic_cast<pcpp::GREv0Layer*>(gre)) {
+                                if (version.has_value() && version.value() != 0) return false;
+                                if (protocol_type.has_value() && ntohs(grev0->getGreHeader()->protocol) != protocol_type.value()) return false;
+                                
+                                // Check sequence number for GREv0
+                                if (seq_number.has_value()) {
+                                    uint32_t pkt_seq;
+                                    if (!grev0->getSequenceNumber(pkt_seq) || pkt_seq != seq_number.value()) return false;
+                                }
+                                // GREv0 doesn't have ACK number
+                                if (ack_number.has_value()) return false;
+
+                            } else if (auto grev1 = dynamic_cast<pcpp::GREv1Layer*>(gre)) {
+                                if (version.has_value() && version.value() != 1) return false;
+                                if (protocol_type.has_value() && ntohs(grev1->getGreHeader()->protocol) != protocol_type.value()) return false;
+
+                                // Check sequence number for GREv1
+                                if (seq_number.has_value()) {
+                                    uint32_t pkt_seq;
+                                    if (!grev1->getSequenceNumber(pkt_seq) || pkt_seq != seq_number.value()) return false;
+                                }
+                                // Check ACK number for GREv1
+                                if (ack_number.has_value()) {
+                                    uint32_t pkt_ack;
+                                    if (!grev1->getAcknowledgmentNum(pkt_ack) || pkt_ack != ack_number.value()) return false;
+                                }
+                            } else {
+                                // Neither GREv0 nor GREv1, something is wrong
+                                return false;
+                            }
+                            
+                            return true;
+                        }
+                    private:
+                        std::optional<uint8_t> version;
+                        std::optional<uint16_t> protocol_type;
+                        std::optional<uint32_t> seq_number, ack_number;
+                    };
+
+                    /*
+                        ICMPv6
+                        "icmpv6": { "type": 128, "code": 0 } // Echo Request
+                    */
+                    class ConditionICMPV6Object : public ConditionObjectBase {
+                     public:
+                        explicit ConditionICMPV6Object(const json& cond) {
+                            if (cond.contains("type")) type = cond["type"].get<uint8_t>();
+                            if (cond.contains("code")) code = cond["code"].get<uint8_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::IcmpV6Layer* icmpv6 = pkt.getLayerOfType<pcpp::IcmpV6Layer>();
+                            if (!icmpv6) return false;
+                            // getMessageType() returns an enum, so cast to underlying type (int) then to uint8_t
+                            if (type.has_value() && static_cast<uint8_t>(icmpv6->getMessageType()) != type.value()) return false;
+                            if (code.has_value() && icmpv6->getCode() != code.value()) return false;
+                            return true;
+                        }
+                    private:
+                        std::optional<uint8_t> type, code;
+                    };
+
+                    
+
+                    /*
+                        VRRP
+                        "vrrp": { "type": "advertisement", "vrid": 10 }
+                    */
+                    class ConditionVRRPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionVRRPObject(const json& cond) {
+                            if (cond.contains("version")) version = cond["version"].get<uint8_t>();
+                            if (cond.contains("type")) type = cond["type"].get<std::string>();
+                            if (cond.contains("vrid")) vrid = cond["vrid"].get<uint8_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::VrrpLayer* vrrp = pkt.getLayerOfType<pcpp::VrrpLayer>();
+                            if (!vrrp) return false;
+
+                            // Check version first
+                            if (version.has_value() && vrrp->getVersion() != version.value()) return false;
+                            
+                            // Common fields
+                            if (vrid.has_value() && vrrp->getVirtualRouterID() != vrid.value()) return false;
+                            if (type.has_value()) {
+                                // getType() returns VrrpType enum
+                                if (type.value() == "advertisement" && vrrp->getType() != pcpp::VrrpLayer::VrrpType_Advertisement) return false;
+                            }
+                            return true;
+                        }
+                    private:
+                        std::optional<uint8_t> version, vrid;
+                        std::optional<std::string> type;
+                    };
+
+                    /*
+                        WireGuard
+                        "wireguard": { "message_type": "handshake_initiation" }
+                    */
+                    class ConditionWireGuardObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionWireGuardObject(const json& cond) {
+                            if (cond.contains("message_type")) message_type = cond["message_type"].get<std::string>();
+                            if (cond.contains("sender_index")) sender_index = cond["sender_index"].get<uint32_t>();
+                            if (cond.contains("receiver_index")) receiver_index = cond["receiver_index"].get<uint32_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::WireGuardLayer* wg = pkt.getLayerOfType<pcpp::WireGuardLayer>();
+                            if (!wg) return false;
+
+                            // Match against specific message types
+                            if (auto wg_init = dynamic_cast<pcpp::WireGuardHandshakeInitiationLayer*>(wg)) {
+                                if (message_type.has_value() && message_type.value() != "handshake_initiation") return false;
+                                if (sender_index.has_value() && wg_init->getSenderIndex() != sender_index.value()) return false;
+                                if (receiver_index.has_value()) return false; // This message type only has sender_index
+                            }
+                            else if (auto wg_resp = dynamic_cast<pcpp::WireGuardHandshakeResponseLayer*>(wg)) {
+                                if (message_type.has_value() && message_type.value() != "handshake_response") return false;
+                                if (sender_index.has_value() && wg_resp->getSenderIndex() != sender_index.value()) return false;
+                                if (receiver_index.has_value() && wg_resp->getReceiverIndex() != receiver_index.value()) return false;
+                            }
+                            else if (auto wg_cookie = dynamic_cast<pcpp::WireGuardCookieReplyLayer*>(wg)) {
+                                if (message_type.has_value() && message_type.value() != "cookie_reply") return false;
+                                if (sender_index.has_value()) return false;
+                                if (receiver_index.has_value() && wg_cookie->getReceiverIndex() != receiver_index.value()) return false;
+                            }
+                            else if (auto wg_data = dynamic_cast<pcpp::WireGuardTransportDataLayer*>(wg)) {
+                                if (message_type.has_value() && message_type.value() != "transport_data") return false;
+                                if (sender_index.has_value()) return false;
+                                if (receiver_index.has_value() && wg_data->getReceiverIndex() != receiver_index.value()) return false;
+                            }
+                            else {
+                                // Unknown or base WireGuard type, only check generic type if rule is generic
+                                if (message_type.has_value()) return false;
+                            }
+                            
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> message_type;
+                        std::optional<uint32_t> sender_index, receiver_index;
+                    };
+
+                    /*
+                        GTP (GPRS Tunneling Protocol)
+                        "gtp": { "version": 1, "message_type": "echo_request" }
+                    */
+                    class ConditionGTPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionGTPObject(const json& cond) {
+                            if (cond.contains("version")) version = cond["version"].get<uint8_t>();
+                            if (cond.contains("message_type")) message_type = cond["message_type"].get<std::string>();
+                            if (cond.contains("teid")) teid = cond["teid"].get<uint32_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            // Check for GTPv1 first
+                            if (auto gtpv1 = pkt.getLayerOfType<pcpp::GtpV1Layer>()) {
+                                if (version.has_value() && version.value() != 1) return false;
+                                if (teid.has_value() && ntohl(gtpv1->getHeader()->teid) != teid.value()) return false;
+                                if (message_type.has_value()) {
+                                    std::string msgTypeStr = gtpv1->getMessageTypeAsString();
+                                    // Convert rule's snake_case to Pcap++'s PascalCase-like string
+                                    std::string expected_str = message_type.value();
+                                    std::replace(expected_str.begin(), expected_str.end(), '_', ' ');
+                                    expected_str[0] = toupper(expected_str[0]);
+                                    // This is a simplified comparison, might need a map for accuracy
+                                    if (msgTypeStr.find(expected_str) == std::string::npos) return false;
+                                }
+                                return true;
+                            }
+                            // Then check for GTPv2
+                            else if (auto gtpv2 = pkt.getLayerOfType<pcpp::GtpV2Layer>()) {
+                                if (version.has_value() && version.value() != 2) return false;
+                                auto teid_pair = gtpv2->getTeid();
+                                if (teid.has_value()) {
+                                    if (!teid_pair.first || teid_pair.second != teid.value()) return false;
+                                }
+                                if (message_type.has_value()) {
+                                    std::string msgTypeStr = gtpv2->getMessageType().toString();
+                                    if (msgTypeStr.find(message_type.value()) == std::string::npos) return false;
+                                }
+                                return true;
+                            }
+                            return false;
+                        }
+                    private:
+                        std::optional<uint8_t> version;
+                        std::optional<std::string> message_type;
+                        std::optional<uint32_t> teid;
+                    };
+
+                    /*
+                        SIP (Session Initiation Protocol)
+                        "sip": { "type": "request", "method": "INVITE" }
+                        "sip": { "type": "response", "status_code": 200 }
+                    */
+                    class ConditionSIPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionSIPObject(const json& cond) {
+                            if (cond.contains("type")) type = cond["type"].get<std::string>();
+                            if (cond.contains("method")) method = cond["method"].get<std::string>();
+                            if (cond.contains("status_code")) status_code = cond["status_code"].get<int>();
+                            if (cond.contains("uri_contains")) uri_contains = cond["uri_contains"].get<std::string>();
+                            if (cond.contains("header_contains")) header_contains = cond["header_contains"].get<std::string>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            if (auto req = pkt.getLayerOfType<pcpp::SipRequestLayer>()) {
+                                if (type.has_value() && type.value() != "request") return false;
+                                pcpp::SipRequestFirstLine* firstLine = req->getFirstLine();
+                                if (!firstLine || !firstLine->isComplete()) return false;
+
+                                if (method.has_value()) {
+                                    // --- 수정된 부분 ---
+                                    // getMethod()가 반환하는 enum 값을 문자열로 변환
+                                    std::string methodStr = sipMethodToString(firstLine->getMethod());
+                                    if (methodStr != method.value()) return false;
+                                    // --- 수정 끝 ---
+                                }
+
+                                if (uri_contains.has_value() && firstLine->getUri().find(uri_contains.value()) == std::string::npos) return false;
+                                
+                                if (header_contains.has_value()) {
+                                    // getFieldByName은 TextBasedProtocolMessage에 있는 메서드
+                                    auto field = req->getFieldByName(header_contains.value());
+                                    if (field == nullptr) return false;
+                                }
+                                return true;
+                            }
+                            if (auto res = pkt.getLayerOfType<pcpp::SipResponseLayer>()) {
+                                if (type.has_value() && type.value() != "response") return false;
+                                pcpp::SipResponseFirstLine* firstLine = res->getFirstLine();
+                                if (!firstLine || !firstLine->isComplete()) return false;
+
+                                if (status_code.has_value() && firstLine->getStatusCodeAsInt() != status_code.value()) return false;
+                                
+                                if (header_contains.has_value()) {
+                                    auto field = res->getFieldByName(header_contains.value());
+                                    if (field == nullptr) return false;
+                                }
+                                return true;
+                            }
+                            return false;
+                        }
+                    private:
+                        // --- 추가된 Helper 함수 ---
+                        static std::string sipMethodToString(pcpp::SipRequestLayer::SipMethod method) {
+                            switch (method) {
+                                case pcpp::SipRequestLayer::SipINVITE:    return "INVITE";
+                                case pcpp::SipRequestLayer::SipACK:       return "ACK";
+                                case pcpp::SipRequestLayer::SipBYE:       return "BYE";
+                                case pcpp::SipRequestLayer::SipCANCEL:    return "CANCEL";
+                                case pcpp::SipRequestLayer::SipREGISTER:  return "REGISTER";
+                                case pcpp::SipRequestLayer::SipOPTIONS:   return "OPTIONS";
+                                case pcpp::SipRequestLayer::SipSUBSCRIBE: return "SUBSCRIBE";
+                                case pcpp::SipRequestLayer::SipNOTIFY:    return "NOTIFY";
+                                case pcpp::SipRequestLayer::SipPUBLISH:   return "PUBLISH";
+                                case pcpp::SipRequestLayer::SipINFO:      return "INFO";
+                                case pcpp::SipRequestLayer::SipREFER:     return "REFER";
+                                case pcpp::SipRequestLayer::SipMESSAGE:   return "MESSAGE";
+                                case pcpp::SipRequestLayer::SipUPDATE:    return "UPDATE";
+                                default:                                  return "Unknown";
+                            }
+                        }
+                        // --- Helper 함수 끝 ---
+
+                        std::optional<std::string> type, method, uri_contains, header_contains;
+                        std::optional<int> status_code;
+                    };
+                    
+                    /*
+                        DHCP
+                        "dhcp": { "message_type": "discover" }
+                    */
+                    class ConditionDHCPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionDHCPObject(const json& cond) {
+                            if (cond.contains("message_type")) message_type = cond["message_type"].get<std::string>();
+                            if (cond.contains("op_code")) op_code = cond["op_code"].get<uint8_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::DhcpLayer* dhcp = pkt.getLayerOfType<pcpp::DhcpLayer>();
+                            if (!dhcp) return false;
+                            if (op_code.has_value() && dhcp->getDhcpHeader()->opCode != op_code.value()) return false;
+                            if (message_type.has_value()) {
+                                auto dhcpMessageType = dhcp->getMessageType();
+                                if (dhcpMessageType == pcpp::DHCP_UNKNOWN_MSG_TYPE) return false;
+                                if (message_type.value() == "discover" && dhcpMessageType != pcpp::DHCP_DISCOVER) return false;
+                                if (message_type.value() == "offer" && dhcpMessageType != pcpp::DHCP_OFFER) return false;
+                                if (message_type.value() == "request" && dhcpMessageType != pcpp::DHCP_REQUEST) return false;
+                                if (message_type.value() == "ack" && dhcpMessageType != pcpp::DHCP_ACK) return false;
+                                if (message_type.value() == "nak" && dhcpMessageType != pcpp::DHCP_NAK) return false;
+                                if (message_type.value() == "release" && dhcpMessageType != pcpp::DHCP_RELEASE) return false;
+                                if (message_type.value() == "inform" && dhcpMessageType != pcpp::DHCP_INFORM) return false;
+                                if (message_type.value() == "decline" && dhcpMessageType != pcpp::DHCP_DECLINE) return false;
+                            }
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> message_type;
+                        std::optional<uint8_t> op_code;
+                    };
+
+                    /*
+                        FTP
+                        "ftp": { "type": "request", "command": "USER" }
+                        "ftp": { "type": "response", "status_code": 220 }
+                    */
+                    class ConditionFTPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionFTPObject(const json& cond) {
+                            if (cond.contains("type")) type = cond["type"].get<std::string>();
+                            if (cond.contains("command")) command = cond["command"].get<std::string>();
+                            if (cond.contains("status_code")) status_code = cond["status_code"].get<int>();
+                            if (cond.contains("message_contains")) message_contains = cond["message_contains"].get<std::string>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            if (auto req = pkt.getLayerOfType<pcpp::FtpRequestLayer>()) {
+                                if (type.has_value() && type.value() != "request") return false;
+                                if (command.has_value() && req->getCommandString() != command.value()) return false;
+                                if (message_contains.has_value() && req->getCommandOption().find(message_contains.value()) == std::string::npos) return false;
+                                return true;
+                            }
+                            if (auto res = pkt.getLayerOfType<pcpp::FtpResponseLayer>()) {
+                                if (type.has_value() && type.value() != "response") return false;
+                                // getStatusCode() returns enum, need to cast to int
+                                if (status_code.has_value() && static_cast<int>(res->getStatusCode()) != status_code.value()) return false;
+                                // FtpResponseLayer doesn't have a direct getResponseMessage() method.
+                                // getStatusOption() gets the message part.
+                                if (message_contains.has_value() && res->getStatusOption().find(message_contains.value()) == std::string::npos) return false;
+                                return true;
+                            }
+                            return false;
+                        }
+                    private:
+                        std::optional<std::string> type, command, message_contains;
+                        std::optional<int> status_code;
+                    };
+
+                    /*
+                        Telnet
+                        "telnet": { "data_contains": "login:" }
+                    */
+                    class ConditionTelnetObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionTelnetObject(const json& cond) {
+                            if (cond.contains("command")) command_str = cond["command"].get<std::string>();
+                            if (cond.contains("data_contains")) data_contains = cond["data_contains"].get<std::string>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::TelnetLayer* telnet = pkt.getLayerOfType<pcpp::TelnetLayer>();
+                            if (!telnet) return false;
+                            
+                            if (command_str.has_value()) {
+                                bool command_found = false;
+                                pcpp::TelnetLayer::TelnetCommand cmd = telnet->getFirstCommand();
+                                while (cmd != pcpp::TelnetLayer::TelnetCommand::TelnetCommandEndOfPacket) {
+                                    if (pcpp::TelnetLayer::getTelnetCommandAsString(cmd) == command_str.value()) {
+                                        command_found = true;
+                                        break;
+                                    }
+                                    cmd = telnet->getNextCommand();
+                                }
+                                if (!command_found) return false;
+                            }
+
+                            if (data_contains.has_value()) {
+                                std::string data = telnet->getDataAsString(false); // keep escape characters
+                                if (data.find(data_contains.value()) == std::string::npos) return false;
+                            }
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> command_str;
+                        std::optional<std::string> data_contains;
+                    };
+
+                    /*
+                        NTP
+                        "ntp": { "mode": "client", "stratum": 3 }
+                    */
+                    class ConditionNTPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionNTPObject(const json& cond) {
+                            if (cond.contains("mode")) mode = cond["mode"].get<std::string>();
+                            if (cond.contains("stratum")) stratum = cond["stratum"].get<uint8_t>();
+                            if (cond.contains("leap_indicator")) leap_indicator = cond["leap_indicator"].get<std::string>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::NtpLayer* ntp = pkt.getLayerOfType<pcpp::NtpLayer>();
+                            if (!ntp) return false;
+                            if (stratum.has_value() && ntp->getStratum() != stratum.value()) return false;
+                            if (mode.has_value()) {
+                                pcpp::NtpLayer::Mode ntpMode = ntp->getMode();
+                                if (mode.value() == "client" && ntpMode != pcpp::NtpLayer::Client) return false;
+                                if (mode.value() == "server" && ntpMode != pcpp::NtpLayer::Server) return false;
+                                if (mode.value() == "symmetric_active" && ntpMode != pcpp::NtpLayer::SymActive) return false;
+                                // ... add other modes as needed
+                            }
+                            if (leap_indicator.has_value()) {
+                                pcpp::NtpLayer::LeapIndicator li = ntp->getLeapIndicator();
+                                if (leap_indicator.value() == "no_warning" && li != pcpp::NtpLayer::NoWarning) return false;
+                                if (leap_indicator.value() == "sixty_one_seconds" && li != pcpp::NtpLayer::Last61Secs) return false;
+                                if (leap_indicator.value() == "fifty_nine_seconds" && li != pcpp::NtpLayer::Last59Secs) return false;
+                            }
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> mode, leap_indicator;
+                        std::optional<uint8_t> stratum;
+                    };
+
+                    /*
+                        SMTP
+                        "smtp": { "command": "HELO" }
+                    */
+                    class ConditionSMTPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionSMTPObject(const json& cond) {
+                            if (cond.contains("command")) command = cond["command"].get<std::string>();
+                            if (cond.contains("data_contains")) data_contains = cond["data_contains"].get<std::string>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::SmtpLayer* smtp = pkt.getLayerOfType<pcpp::SmtpLayer>();
+                            if (!smtp) return false;
+                            // Pcap++ SMTP support is basic, primarily for payload.
+                            // We inspect the payload directly for commands/responses.
+                            std::string payload(reinterpret_cast<const char*>(smtp->getLayerPayload()), smtp->getLayerPayloadSize());
+                            if (command.has_value() && payload.rfind(command.value(), 0) != 0) return false; // Starts with command
+                            if (data_contains.has_value() && payload.find(data_contains.value()) == std::string::npos) return false;
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> command, data_contains;
+                    };
+                    
+                    /*
+                        RADIUS
+                        "radius": { "code": "access_request", "id": 123 }
+                    */
+                    class ConditionRADIUSObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionRADIUSObject(const json& cond) {
+                            if (cond.contains("code")) code = cond["code"].get<std::string>();
+                            if (cond.contains("id")) id = cond["id"].get<uint8_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::RadiusLayer* radius = pkt.getLayerOfType<pcpp::RadiusLayer>();
+                            if (!radius) return false;
+                            if (id.has_value() && radius->getRadiusHeader()->id != id.value()) return false;
+                            if (code.has_value()) {
+                                uint8_t pktCode = radius->getRadiusHeader()->code;
+                                if (code.value() == "access_request" && pktCode != 1) return false;
+                                if (code.value() == "access_accept" && pktCode != 2) return false;
+                                if (code.value() == "access_reject" && pktCode != 3) return false;
+                            }
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> code;
+                        std::optional<uint8_t> id;
+                    };
+                    
+                    /*
+                        LDAP
+                        "ldap": { "op_code": "search_request", "message_id": 1 }
+                    */
+                    class ConditionLDAPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionLDAPObject(const json& cond) {
+                            if (cond.contains("op_code")) op_code = cond["op_code"].get<std::string>();
+                            if (cond.contains("message_id")) message_id = cond["message_id"].get<int>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::LdapLayer* ldap = pkt.getLayerOfType<pcpp::LdapLayer>();
+                            if (!ldap) return false;
+
+                            uint16_t pkt_msg_id;
+                            if (!ldap->tryGet(&pcpp::LdapLayer::getMessageID, pkt_msg_id)) return false;
+                            if (message_id.has_value() && pkt_msg_id != message_id.value()) return false;
+                            
+                            if (op_code.has_value()) {
+                                pcpp::LdapOperationType opType;
+                                if (!ldap->tryGet(&pcpp::LdapLayer::getLdapOperationType, opType)) return false;
+
+                                std::string opCodeStr = opType.toString();
+                                // Rule uses snake_case, Pcap++ uses PascalCase, need conversion/mapping
+                                // This is a simplified check
+                                std::string expected_str = op_code.value();
+                                std::replace(expected_str.begin(), expected_str.end(), '_', ' ');
+                                if (opCodeStr.find(expected_str) == std::string::npos) return false;
+                            }
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> op_code;
+                        std::optional<int> message_id;
+                    };
+
+
+
                 }
+
+                
                 
                 class RuleConditionObject
                 {
@@ -1134,6 +2073,52 @@ namespace NDR
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionUDPObject>(condObj));
                                 else if (protocol == ProtocolKey::TLS)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionTLSObject>(condObj));
+                                else if (protocol == ProtocolKey::SSH)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionSSHObject>(condObj));
+
+                                else if (protocol == ProtocolKey::VLAN)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionVLANObject>(condObj));
+                                else if (protocol == ProtocolKey::SLL)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionSLLObject>(condObj));
+                                else if (protocol == ProtocolKey::NULL_LOOPBACK)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionNullLoopbackObject>(condObj));
+                                else if (protocol == ProtocolKey::PPPOE)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionPPPoEObject>(condObj));
+                                else if (protocol == ProtocolKey::VXLAN)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionVXLANObject>(condObj));
+                                else if (protocol == ProtocolKey::MPLS)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionMPLSObject>(condObj));
+                                else if (protocol == ProtocolKey::GRE)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionGREObject>(condObj));
+                                else if (protocol == ProtocolKey::ICMPV6)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionICMPV6Object>(condObj));
+                                //else if (protocol == ProtocolKey::NDP)
+                                    //conditions.push_back(std::make_unique<ConditionLogic::ConditionNDPObject>(condObj));
+                                else if (protocol == ProtocolKey::VRRP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionVRRPObject>(condObj));
+                                else if (protocol == ProtocolKey::WIREGUARD)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionWireGuardObject>(condObj));
+                                //else if (protocol == ProtocolKey::IPSEC)
+                                    //conditions.push_back(std::make_unique<ConditionLogic::ConditionIPSecObject>(condObj));
+                                else if (protocol == ProtocolKey::GTP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionGTPObject>(condObj));
+                                else if (protocol == ProtocolKey::SIP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionSIPObject>(condObj));
+                                else if (protocol == ProtocolKey::DHCP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionDHCPObject>(condObj));
+                                else if (protocol == ProtocolKey::FTP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionFTPObject>(condObj));
+                                else if (protocol == ProtocolKey::TELNET)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionTelnetObject>(condObj));
+                                else if (protocol == ProtocolKey::NTP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionNTPObject>(condObj));
+                                else if (protocol == ProtocolKey::SMTP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionSMTPObject>(condObj));
+                                else if (protocol == ProtocolKey::RADIUS)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionRADIUSObject>(condObj));
+                                else if (protocol == ProtocolKey::LDAP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionLDAPObject>(condObj));
+
                                 else if (protocol == ProtocolKey::PAYLOAD)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionPayloadObject>(condObj));
                                 else

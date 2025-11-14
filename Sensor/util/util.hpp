@@ -19,6 +19,7 @@
 #include <sstream> // stringstream을 사용하기 위해 필요
 #include <pwd.h>
 #include <grp.h>
+#include <future>
 
 namespace NDR
 {

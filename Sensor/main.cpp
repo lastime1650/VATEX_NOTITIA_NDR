@@ -15,10 +15,8 @@ int main()
         Sensor_ID,
         "192.168.1.205", 
         29092, 
-        "ndr_sensor"
+        "raw-ndr-sensor-linux"
     );
-    
-
 
     NDR::Sensor::Manager Sensor(
         Logger,
@@ -29,6 +27,7 @@ int main()
     );
     Sensor.Run();
 
+    // TCP MANAGER 구동
     std::this_thread::sleep_for(std::chrono::seconds(9999));
     
     return 0;

@@ -14,7 +14,7 @@ int main()
     NDR::Server::NDRServer Server(
         "192.168.1.205:29092",
         "NDR_SERVER",
-        "ndr_sensor"
+        "raw-ndr-sensor-linux"
     );
     if(!Server.Run())
         throw std::runtime_error("NDRServer Init Start Failed");

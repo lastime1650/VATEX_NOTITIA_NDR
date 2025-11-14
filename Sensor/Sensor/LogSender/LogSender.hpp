@@ -2,6 +2,7 @@
 #define LOGSENDER_HPP
 
 #include "../../util/util.hpp"
+#include "PacketToJson.hpp"
 
 namespace NDR
 {
@@ -85,7 +86,9 @@ namespace NDR
                         std::string Flow_Session_Id,
                         unsigned long long NanoTimestamp,
 
-                        const DefaultCurrentPacketInfo& CurrentPktInfo
+                        const DefaultCurrentPacketInfo& CurrentPktInfo,
+
+                        const pcpp::Packet& packet
                     )
                     {
                         /*
@@ -123,6 +126,9 @@ namespace NDR
 
                                                 {"direction", CurrentPktInfo.direction}
                                             }
+                                        },
+                                        {
+                                            "packet", PacketParser::packetToJson(packet)
                                         }
                                     }
                                 }
@@ -177,7 +183,9 @@ namespace NDR
                         std::string Flow_Session_Id,
                         unsigned long long NanoTimestamp,
 
-                        const SessionRuleDetectInfo& RuleInfo
+                        const SessionRuleDetectInfo& RuleInfo,
+
+                        const pcpp::Packet& packet
                     )
                     {
                         // 세션 시작
@@ -202,6 +210,9 @@ namespace NDR
                                                 {"stage_action", RuleInfo.DetectedStage.action.Action},
                                                 {"stage_action_message", RuleInfo.DetectedStage.action.message},
                                             }
+                                        },
+                                        {
+                                            "packet", PacketParser::packetToJson(packet)
                                         }
                                     }
                                 }
