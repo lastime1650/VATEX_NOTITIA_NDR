@@ -174,6 +174,8 @@ namespace NDR
                     constexpr const char* SMTP     = "smtp";
                     constexpr const char* RADIUS   = "radius";
                     constexpr const char* LDAP     = "ldap";
+                    constexpr const char* BGP      = "bgp"; 
+                    
 
                 }
                 // ---------------------------
@@ -214,7 +216,8 @@ namespace NDR
                     { ProtocolKey::NTP, {"mode", "stratum", "leap_indicator"}},
                     { ProtocolKey::SMTP, {"command", "data_contains"}},
                     { ProtocolKey::RADIUS, {"code", "id"}},
-                    { ProtocolKey::LDAP, {"op_code", "message_id"}}
+                    { ProtocolKey::LDAP, {"op_code", "message_id"}},
+                    { ProtocolKey::BGP, {"type",  "as_num", "hold_time", "bgp_id", "error_code", "error_subcode", "withdrawn_routes_contains", "nlri_contains",  "afi", "safi"} }
                     /*
                     // PAYLOAD ( None-Parsed Layer )
                     {
@@ -264,6 +267,150 @@ namespace NDR
                             virtual ~ConditionObjectBase() = default;
                             virtual bool Match(const pcpp::Packet& pkt) = 0;
                     };
+
+                    /*
+                        IPSec (AH & ESP)
+                        "ipsec": { "type": "ah", "spi": 123456 }
+                        "ipsec": { "type": "esp", "seq_number": 100 }
+                    */
+                    class ConditionIPSecObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionIPSecObject(const json& cond) {
+                            if (cond.contains("type")) type = cond["type"].get<std::string>();
+                            if (cond.contains("spi")) spi = cond["spi"].get<uint32_t>();
+                            if (cond.contains("seq_number")) seq_number = cond["seq_number"].get<uint32_t>();
+                        }
+                        bool Match(const pcpp::Packet& pkt) override {
+                            // Check for Authentication Header (AH)
+                            if (auto ah = pkt.getLayerOfType<pcpp::AuthenticationHeaderLayer>()) {
+                                if (type.has_value() && type.value() != "ah") return false;
+                                if (spi.has_value() && ah->getSPI() != spi.value()) return false;
+                                if (seq_number.has_value() && ah->getSequenceNumber() != seq_number.value()) return false;
+                                return true;
+                            }
+                            // Check for Encapsulating Security Payload (ESP)
+                            if (auto esp = pkt.getLayerOfType<pcpp::ESPLayer>()) {
+                                if (type.has_value() && type.value() != "esp") return false;
+                                if (spi.has_value() && esp->getSPI() != spi.value()) return false;
+                                if (seq_number.has_value() && esp->getSequenceNumber() != seq_number.value()) return false;
+                                return true;
+                            }
+                            return false;
+                        }
+                    private:
+                        std::optional<std::string> type;
+                        std::optional<uint32_t> spi, seq_number;
+                    };
+
+                    /*
+                        BGP (Border Gateway Protocol)
+                        "bgp": { "type": "open", "as_num": 64512 }
+                        "bgp": { "type": "update", "nlri_contains": "192.168.1.0" }
+                        "bgp": { "type": "notification", "error_code": 6 } // Cease
+                    */
+                    class ConditionBGPObject : public ConditionObjectBase {
+                    public:
+                        explicit ConditionBGPObject(const json& cond) {
+                            if (cond.contains("type")) type = cond["type"].get<std::string>();
+                            // OPEN
+                            if (cond.contains("as_num")) as_num = cond["as_num"].get<uint16_t>();
+                            if (cond.contains("hold_time")) hold_time = cond["hold_time"].get<uint16_t>();
+                            if (cond.contains("bgp_id")) bgp_id = cond["bgp_id"].get<std::string>();
+                            // NOTIFICATION
+                            if (cond.contains("error_code")) error_code = cond["error_code"].get<uint8_t>();
+                            if (cond.contains("error_subcode")) error_subcode = cond["error_subcode"].get<uint8_t>();
+                            // UPDATE
+                            if (cond.contains("withdrawn_routes_contains")) withdrawn_routes_contains = cond["withdrawn_routes_contains"].get<std::string>();
+                            if (cond.contains("nlri_contains")) nlri_contains = cond["nlri_contains"].get<std::string>();
+                            // ROUTE-REFRESH
+                            if (cond.contains("afi")) afi = cond["afi"].get<uint16_t>();
+                            if (cond.contains("safi")) safi = cond["safi"].get<uint8_t>();
+                        }
+
+                        bool Match(const pcpp::Packet& pkt) override {
+                            pcpp::BgpLayer* bgp = pkt.getLayerOfType<pcpp::BgpLayer>();
+                            if (!bgp) return false;
+
+                            // Match specific message types using dynamic_cast
+                            if (auto open_msg = dynamic_cast<pcpp::BgpOpenMessageLayer*>(bgp)) {
+                                if (type.has_value() && type.value() != "open") return false;
+                                if (as_num.has_value() && ntohs(open_msg->getOpenMsgHeader()->myAutonomousSystem) != as_num.value()) return false;
+                                if (hold_time.has_value() && ntohs(open_msg->getOpenMsgHeader()->holdTime) != hold_time.value()) return false;
+                                if (bgp_id.has_value() && open_msg->getBgpId().toString() != bgp_id.value()) return false;
+                                return true;
+                            }
+                            if (auto update_msg = dynamic_cast<pcpp::BgpUpdateMessageLayer*>(bgp)) {
+                                if (type.has_value() && type.value() != "update") return false;
+
+                                if (withdrawn_routes_contains.has_value()) {
+                                    std::vector<pcpp::BgpUpdateMessageLayer::prefix_and_ip> routes;
+                                    update_msg->getWithdrawnRoutes(routes);
+                                    bool found = false;
+                                    for(const auto& route : routes) {
+                                        if (route.ipAddr.toString() == withdrawn_routes_contains.value()) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!found) return false;
+                                }
+
+                                if (nlri_contains.has_value()) {
+                                    std::vector<pcpp::BgpUpdateMessageLayer::prefix_and_ip> nlri_vec;
+                                    update_msg->getNetworkLayerReachabilityInfo(nlri_vec);
+                                    bool found = false;
+                                    for(const auto& nlri : nlri_vec) {
+                                        if (nlri.ipAddr.toString() == nlri_contains.value()) {
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!found) return false;
+                                }
+                                return true;
+                            }
+                            if (auto notif_msg = dynamic_cast<pcpp::BgpNotificationMessageLayer*>(bgp)) {
+                                if (type.has_value() && type.value() != "notification") return false;
+                                if (error_code.has_value() && notif_msg->getNotificationMsgHeader()->errorCode != error_code.value()) return false;
+                                if (error_subcode.has_value() && notif_msg->getNotificationMsgHeader()->errorSubCode != error_subcode.value()) return false;
+                                return true;
+                            }
+                            if (auto keepalive_msg = dynamic_cast<pcpp::BgpKeepaliveMessageLayer*>(bgp)) {
+                                if (type.has_value() && type.value() != "keepalive") return false;
+                                // Keepalive has no specific fields other than common header
+                                return true;
+                            }
+                            if (auto refresh_msg = dynamic_cast<pcpp::BgpRouteRefreshMessageLayer*>(bgp)) {
+                                if (type.has_value() && type.value() != "route_refresh") return false;
+                                if (afi.has_value() && ntohs(refresh_msg->getRouteRefreshHeader()->afi) != afi.value()) return false;
+                                if (safi.has_value() && refresh_msg->getRouteRefreshHeader()->safi != safi.value()) return false;
+                                return true;
+                            }
+                            
+                            // If no specific type matches and a type was specified in the rule, it's a mismatch
+                            if (type.has_value()) return false;
+                            
+                            // If no type was specified, just the presence of a BGP layer is enough
+                            return true;
+                        }
+                    private:
+                        std::optional<std::string> type;
+                        // OPEN
+                        std::optional<uint16_t> as_num;
+                        std::optional<uint16_t> hold_time;
+                        std::optional<std::string> bgp_id;
+                        // NOTIFICATION
+                        std::optional<uint8_t> error_code;
+                        std::optional<uint8_t> error_subcode;
+                        // UPDATE
+                        std::optional<std::string> withdrawn_routes_contains;
+                        std::optional<std::string> nlri_contains;
+                        // ROUTE-REFRESH
+                        std::optional<uint16_t> afi;
+                        std::optional<uint8_t> safi;
+                    };
+
+                    
 
                     /*
                         PAYLOAD (None-Parsed L4+ Data) - Supports "binary", "string", and "regex"
@@ -2092,14 +2239,12 @@ namespace NDR
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionGREObject>(condObj));
                                 else if (protocol == ProtocolKey::ICMPV6)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionICMPV6Object>(condObj));
-                                //else if (protocol == ProtocolKey::NDP)
-                                    //conditions.push_back(std::make_unique<ConditionLogic::ConditionNDPObject>(condObj));
                                 else if (protocol == ProtocolKey::VRRP)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionVRRPObject>(condObj));
                                 else if (protocol == ProtocolKey::WIREGUARD)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionWireGuardObject>(condObj));
-                                //else if (protocol == ProtocolKey::IPSEC)
-                                    //conditions.push_back(std::make_unique<ConditionLogic::ConditionIPSecObject>(condObj));
+                                else if (protocol == ProtocolKey::IPSEC)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionIPSecObject>(condObj));
                                 else if (protocol == ProtocolKey::GTP)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionGTPObject>(condObj));
                                 else if (protocol == ProtocolKey::SIP)
@@ -2118,6 +2263,8 @@ namespace NDR
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionRADIUSObject>(condObj));
                                 else if (protocol == ProtocolKey::LDAP)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionLDAPObject>(condObj));
+                                else if (protocol == ProtocolKey::BGP)
+                                    conditions.push_back(std::make_unique<ConditionLogic::ConditionBGPObject>(condObj));
 
                                 else if (protocol == ProtocolKey::PAYLOAD)
                                     conditions.push_back(std::make_unique<ConditionLogic::ConditionPayloadObject>(condObj));

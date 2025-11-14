@@ -22,6 +22,43 @@
 #include <pcapplusplus/SSHLayer.h>
 #include <pcapplusplus/PayloadLayer.h>
 
+#include <pcapplusplus/FtpLayer.h>
+#include <pcapplusplus/TelnetLayer.h>
+#include <pcapplusplus/StpLayer.h>
+#include <pcapplusplus/VlanLayer.h>
+#include <pcapplusplus/SllLayer.h>         // Linux cooked capture
+#include <pcapplusplus/NullLoopbackLayer.h>
+#include <pcapplusplus/PacketTrailerLayer.h>
+#include <pcapplusplus/PPPoELayer.h>
+#include <pcapplusplus/VxlanLayer.h>
+#include <pcapplusplus/MplsLayer.h>
+#include <pcapplusplus/StpLayer.h>
+#include <pcapplusplus/WakeOnLanLayer.h>
+#include <pcapplusplus/GreLayer.h>
+#include <pcapplusplus/IcmpV6Layer.h>
+#include <pcapplusplus/NdpLayer.h>
+#include <pcapplusplus/VrrpLayer.h>
+#include <pcapplusplus/WireGuardLayer.h>
+#include <pcapplusplus/CotpLayer.h>
+#include <pcapplusplus/IPSecLayer.h>
+#include <pcapplusplus/GtpLayer.h>
+#include <pcapplusplus/TpktLayer.h>
+#include <pcapplusplus/SdpLayer.h>
+#include <pcapplusplus/SipLayer.h>
+#include <pcapplusplus/DhcpLayer.h>
+#include <pcapplusplus/DhcpV6Layer.h>
+#include <pcapplusplus/FtpLayer.h>
+#include <pcapplusplus/LdapLayer.h>
+#include <pcapplusplus/NtpLayer.h>
+#include <pcapplusplus/RadiusLayer.h>
+#include <pcapplusplus/S7CommLayer.h>
+#include <pcapplusplus/SmtpLayer.h>
+#include <pcapplusplus/SomeIpLayer.h>
+#include <pcapplusplus/TelnetLayer.h>
+#include <pcapplusplus/NdpLayer.h>
+
+#include <pcapplusplus/BgpLayer.h>
+
 namespace PacketParser
 {
     // --- 헬퍼 함수들 ---
@@ -61,6 +98,18 @@ namespace PacketParser
             }
         }
 
+        std::string sipMethodToString(pcpp::SipRequestLayer::SipMethod method) {
+            switch (method) {
+                case pcpp::SipRequestLayer::SipINVITE:    return "INVITE";
+                case pcpp::SipRequestLayer::SipACK:       return "ACK";
+                case pcpp::SipRequestLayer::SipBYE:       return "BYE";
+                case pcpp::SipRequestLayer::SipCANCEL:    return "CANCEL";
+                case pcpp::SipRequestLayer::SipREGISTER:  return "REGISTER";
+                // ... (필요에 따라 다른 메서드 추가) ...
+                default:                                  return "Unknown";
+            }
+        }
+
         std::string bytesToHexString(const uint8_t* data, size_t len) {
             if (data == nullptr || len == 0) {
                 return "";
@@ -78,6 +127,288 @@ namespace PacketParser
     } // namespace helpers
 
     // --- 각 레이어별 파싱 함수 ---
+
+    json parseVlanLayer(const pcpp::VlanLayer* vlanLayer) {
+        json j;
+        if (!vlanLayer) return j;
+        j["vlan_id"] = vlanLayer->getVlanID();
+        j["priority"] = vlanLayer->getPriority();
+        j["dei"] = vlanLayer->getCFI(); // CFI is now DEI
+        return j;
+    }
+
+    json parseSllLayer(const pcpp::SllLayer* sllLayer) {
+        json j;
+        if (!sllLayer) return j;
+        const pcpp::sll_header* hdr = sllLayer->getSllHeader();
+        j["packet_type"] = ntohs(hdr->packet_type);
+        j["arphrd_type"] = ntohs(hdr->ARPHRD_type);
+        j["link_layer_addr_len"] = ntohs(hdr->link_layer_addr_len);
+        if (ntohs(hdr->link_layer_addr_len) > 0) {
+            j["link_layer_addr"] = helpers::bytesToHexString(hdr->link_layer_addr, ntohs(hdr->link_layer_addr_len));
+        }
+        return j;
+    }
+
+    json parseNullLoopbackLayer(const pcpp::NullLoopbackLayer* nullLayer) {
+        json j;
+        if (!nullLayer) return j;
+        j["family"] = nullLayer->getFamily();
+        return j;
+    }
+
+    json parsePPPoELayer(const pcpp::Layer* pppoeLayer) {
+        json j;
+        if (!pppoeLayer) return j;
+
+        if (auto session = dynamic_cast<const pcpp::PPPoESessionLayer*>(pppoeLayer)) {
+            j["type"] = "Session";
+            j["version"] = static_cast<int>( session->getPPPoEHeader()->version );
+            j["session_id"] = ntohs(session->getPPPoEHeader()->sessionId);
+            j["ppp_protocol"] = session->getPPPNextProtocol();
+        } else if (auto discovery = dynamic_cast<const pcpp::PPPoEDiscoveryLayer*>(pppoeLayer)) {
+            j["type"] = "Discovery";
+            j["version"] = static_cast<int>( discovery->getPPPoEHeader()->version );
+            j["code"] = discovery->getPPPoEHeader()->code;
+            j["session_id"] = ntohs(discovery->getPPPoEHeader()->sessionId);
+        }
+        return j;
+    }
+
+    json parseVxlanLayer(const pcpp::VxlanLayer* vxlanLayer) {
+        json j;
+        if (!vxlanLayer) return j;
+        j["vni"] = vxlanLayer->getVNI();
+        return j;
+    }
+
+    json parseMplsLayer(const pcpp::MplsLayer* mplsLayer) {
+        json j;
+        if (!mplsLayer) return j;
+        j["label"] = mplsLayer->getMplsLabel();
+        j["ttl"] = mplsLayer->getTTL();
+        j["experimental_use"] = mplsLayer->getExperimentalUseValue();
+        j["is_bottom_of_stack"] = mplsLayer->isBottomOfStack();
+        return j;
+    }
+
+    json parseGreLayer(const pcpp::GreLayer* greLayer) {
+        json j;
+        if (!greLayer) return j;
+        uint32_t seq, ack;
+
+        if (auto grev0 = dynamic_cast<const pcpp::GREv0Layer*>(greLayer)) {
+            j["version"] = 0;
+            if (grev0->getSequenceNumber(seq)) j["sequence_number"] = seq;
+        } else if (auto grev1 = dynamic_cast<const pcpp::GREv1Layer*>(greLayer)) {
+            j["version"] = 1;
+            if (grev1->getSequenceNumber(seq)) j["sequence_number"] = seq;
+            if (grev1->getAcknowledgmentNum(ack)) j["ack_number"] = ack;
+        }
+        return j;
+    }
+
+    json parseIcmpV6Layer(const pcpp::IcmpV6Layer* icmpv6Layer) {
+        json j;
+        if (!icmpv6Layer) return j;
+        auto msgType = icmpv6Layer->getMessageType();
+        j["type"] = static_cast<int>(msgType);
+        j["code"] = icmpv6Layer->getCode();
+
+        // NDP 메시지인 경우 추가 정보 파싱
+        if (msgType == pcpp::ICMPv6MessageType::ICMPv6_NEIGHBOR_SOLICITATION || msgType == pcpp::ICMPv6MessageType::ICMPv6_NEIGHBOR_ADVERTISEMENT) {
+            if (icmpv6Layer->getDataLen() >= 24)
+            {
+                // IcmpV6Layer의 데이터 시작점에서 8바이트 떨어진 위치에서 IPv6 주소를 생성합니다.
+                pcpp::IPv6Address targetAddr(icmpv6Layer->getData() + 8);
+                j["ndp_target_address"] = targetAddr.toString();
+            }
+        }
+        return j;
+    }
+
+    json parseVrrpLayer(const pcpp::VrrpLayer* vrrpLayer) {
+        json j;
+        if (!vrrpLayer) return j;
+        j["version"] = vrrpLayer->getVersion();
+        j["type"] = vrrpLayer->getType();
+        j["vrid"] = vrrpLayer->getVirtualRouterID();
+        j["priority"] = vrrpLayer->getPriority();
+        json ip_addrs = json::array();
+        for (const auto& ip : vrrpLayer->getIPAddresses()) {
+            ip_addrs.push_back(ip.toString());
+        }
+        j["ip_addresses"] = ip_addrs;
+        return j;
+    }
+
+    json parseWireGuardLayer(const pcpp::WireGuardLayer* wgLayer) {
+        json j;
+        if (!wgLayer) return j;
+        j["message_type_str"] = wgLayer->getMessageTypeAsString();
+        
+        if (auto init = dynamic_cast<const pcpp::WireGuardHandshakeInitiationLayer*>(wgLayer)) {
+            j["sender_index"] = init->getSenderIndex();
+        } else if (auto resp = dynamic_cast<const pcpp::WireGuardHandshakeResponseLayer*>(wgLayer)) {
+            j["sender_index"] = resp->getSenderIndex();
+            j["receiver_index"] = resp->getReceiverIndex();
+        } else if (auto cookie = dynamic_cast<const pcpp::WireGuardCookieReplyLayer*>(wgLayer)) {
+            j["receiver_index"] = cookie->getReceiverIndex();
+        } else if (auto data = dynamic_cast<const pcpp::WireGuardTransportDataLayer*>(wgLayer)) {
+            j["receiver_index"] = data->getReceiverIndex();
+            j["counter"] = data->getCounter();
+        }
+        return j;
+    }
+
+    json parseIPSecLayer(const pcpp::Layer* ipsecLayer) {
+        json j;
+        if (!ipsecLayer) return j;
+
+        if (auto ah = dynamic_cast<const pcpp::AuthenticationHeaderLayer*>(ipsecLayer)) {
+            j["type"] = "AH";
+            j["spi"] = ah->getSPI();
+            j["sequence_number"] = ah->getSequenceNumber();
+        } else if (auto esp = dynamic_cast<const pcpp::ESPLayer*>(ipsecLayer)) {
+            j["type"] = "ESP";
+            j["spi"] = esp->getSPI();
+            j["sequence_number"] = esp->getSequenceNumber();
+        }
+        return j;
+    }
+
+    json parseGtpLayer(const pcpp::Layer* gtpLayer) {
+        json j;
+        if (!gtpLayer) return j;
+        if (auto gtpv1 = dynamic_cast<const pcpp::GtpV1Layer*>(gtpLayer)) {
+            j["version"] = 1;
+            j["message_type"] = gtpv1->getMessageTypeAsString();
+            j["teid"] = ntohl(gtpv1->getHeader()->teid);
+        } else if (auto gtpv2 = dynamic_cast<const pcpp::GtpV2Layer*>(gtpLayer)) {
+            j["version"] = 2;
+            j["message_type"] = gtpv2->getMessageType().toString();
+            auto teid_pair = gtpv2->getTeid();
+            if (teid_pair.first) {
+                j["teid"] = teid_pair.second;
+            }
+        }
+        return j;
+    }
+
+    json parseSipLayer(const pcpp::Layer* sipLayer) {
+        json j;
+        if (!sipLayer) return j;
+        if (auto req = dynamic_cast<const pcpp::SipRequestLayer*>(sipLayer)) {
+            j["type"] = "request";
+            j["method"] = helpers::sipMethodToString(req->getFirstLine()->getMethod());
+            j["uri"] = req->getFirstLine()->getUri();
+        } else if (auto res = dynamic_cast<const pcpp::SipResponseLayer*>(sipLayer)) {
+            j["type"] = "response";
+            j["status_code"] = res->getFirstLine()->getStatusCodeAsInt();
+            j["reason_phrase"] = res->getFirstLine()->getStatusCodeString();
+        }
+        return j;
+    }
+
+    json parseDhcpLayer(const pcpp::DhcpLayer* dhcpLayer) {
+        json j;
+        if (!dhcpLayer) return j;
+        j["op_code"] = dhcpLayer->getDhcpHeader()->opCode;
+        j["message_type"] = dhcpLayer->getMessageType();
+        j["client_ip"] = dhcpLayer->getClientIpAddress().toString();
+        j["your_ip"] = dhcpLayer->getYourIpAddress().toString();
+        j["server_ip"] = dhcpLayer->getServerIpAddress().toString();
+        j["client_mac"] = dhcpLayer->getClientHardwareAddress().toString();
+        return j;
+    }
+
+    json parseFtpLayer(const pcpp::Layer* ftpLayer) {
+        json j;
+        if (!ftpLayer) return j;
+        if (auto req = dynamic_cast<const pcpp::FtpRequestLayer*>(ftpLayer)) {
+            j["type"] = "request";
+            j["command"] = req->getCommandString();
+            j["option"] = req->getCommandOption();
+        } else if (auto res = dynamic_cast<const pcpp::FtpResponseLayer*>(ftpLayer)) {
+            j["type"] = "response";
+            j["status_code"] = static_cast<int>(res->getStatusCode());
+            j["message"] = res->getStatusOption();
+        }
+        return j;
+    }
+
+    json parseTelnetLayer(const pcpp::TelnetLayer* telnetLayer) {
+        json j;
+        if (!telnetLayer) return j;
+        j["data"] = const_cast<pcpp::TelnetLayer*>(telnetLayer)->getDataAsString();
+        return j;
+    }
+
+    json parseNtpLayer(const pcpp::NtpLayer* ntpLayer) {
+        json j;
+        if (!ntpLayer) return j;
+        j["version"] = ntpLayer->getVersion();
+        j["mode"] = ntpLayer->getModeString();
+        j["stratum"] = ntpLayer->getStratum();
+        j["leap_indicator"] = ntpLayer->getLeapIndicator();
+        j["reference_id"] = ntpLayer->getReferenceIdentifierString();
+        return j;
+    }
+
+    json parseRadiusLayer(const pcpp::RadiusLayer* radiusLayer) {
+        json j;
+        if (!radiusLayer) return j;
+        j["code"] = radiusLayer->getRadiusHeader()->code;
+        j["id"] = radiusLayer->getRadiusHeader()->id;
+        // Attributes require iteration, which can be complex.
+        // For simplicity, we only parse the header here.
+        return j;
+    }
+    
+     json parseLdapLayer(const pcpp::LdapLayer* ldapLayer) {
+        json j;
+        if (!ldapLayer) return j;
+        auto nonConstLdap = const_cast<pcpp::LdapLayer*>(ldapLayer);
+        uint16_t msgId;
+        if (nonConstLdap->tryGet(&pcpp::LdapLayer::getMessageID, msgId)) {
+            j["message_id"] = msgId;
+        }
+        pcpp::LdapOperationType opType;
+        if (nonConstLdap->tryGet(&pcpp::LdapLayer::getLdapOperationType, opType)) {
+            j["operation"] = opType.toString();
+        }
+        return j;
+    }
+
+    json parseBgpLayer(const pcpp::BgpLayer* bgpLayer) {
+        json j;
+        if (!bgpLayer) return j;
+        j["type"] = bgpLayer->getMessageTypeAsString();
+
+        if (auto openMsg = dynamic_cast<const pcpp::BgpOpenMessageLayer*>(bgpLayer)) {
+            j["version"] = openMsg->getOpenMsgHeader()->version;
+            j["my_as"] = ntohs(openMsg->getOpenMsgHeader()->myAutonomousSystem);
+            j["hold_time"] = ntohs(openMsg->getOpenMsgHeader()->holdTime);
+            j["bgp_id"] = openMsg->getBgpId().toString();
+        }
+        else if (auto updateMsg = dynamic_cast<const pcpp::BgpUpdateMessageLayer*>(bgpLayer)) {
+            // Withdrawn routes and NLRI are complex; showing counts for simplicity
+            j["withdrawn_routes_len"] = updateMsg->getWithdrawnRoutesLength();
+            j["path_attributes_len"] = updateMsg->getPathAttributesLength();
+            j["nlri_len"] = updateMsg->getNetworkLayerReachabilityInfoLength();
+        }
+        else if (auto notifMsg = dynamic_cast<const pcpp::BgpNotificationMessageLayer*>(bgpLayer)) {
+            j["error_code"] = notifMsg->getNotificationMsgHeader()->errorCode;
+            j["error_subcode"] = notifMsg->getNotificationMsgHeader()->errorSubCode;
+        }
+        else if (auto refreshMsg = dynamic_cast<const pcpp::BgpRouteRefreshMessageLayer*>(bgpLayer)) {
+            j["afi"] = ntohs(refreshMsg->getRouteRefreshHeader()->afi);
+            j["safi"] = refreshMsg->getRouteRefreshHeader()->safi;
+        }
+        // Keepalive has no extra fields
+        
+        return j;
+    }
 
     json parseSSHLayer(const pcpp::SSHLayer* sshLayer)  {
         json j;
@@ -381,50 +712,74 @@ namespace PacketParser
         {
             switch (currentLayer->getProtocol())
             {
-                case pcpp::Ethernet:
-                    result["ethernet"] = parseEthLayer(dynamic_cast<const pcpp::EthLayer*>(currentLayer));
+                // --- OSI Layer 2-3 ---
+                case pcpp::Ethernet: result["ethernet"] = parseEthLayer(dynamic_cast<const pcpp::EthLayer*>(currentLayer)); break;
+                case pcpp::SLL: result["sll"] = parseSllLayer(dynamic_cast<const pcpp::SllLayer*>(currentLayer)); break;
+                case pcpp::NULL_LOOPBACK: result["null_loopback"] = parseNullLoopbackLayer(dynamic_cast<const pcpp::NullLoopbackLayer*>(currentLayer)); break;
+                case pcpp::VLAN: result["vlan"] = parseVlanLayer(dynamic_cast<const pcpp::VlanLayer*>(currentLayer)); break;
+                case pcpp::ARP: result["arp"] = parseArpLayer(dynamic_cast<const pcpp::ArpLayer*>(currentLayer)); break;
+                case pcpp::IPv4: result["ip"] = parseIPv4Layer(dynamic_cast<const pcpp::IPv4Layer*>(currentLayer)); break;
+                case pcpp::IPv6: result["ipv6"] = parseIPv6Layer(dynamic_cast<const pcpp::IPv6Layer*>(currentLayer)); break;
+                
+                // --- OSI Layer 4 ---
+                case pcpp::TCP: result["tcp"] = parseTcpLayer(dynamic_cast<const pcpp::TcpLayer*>(currentLayer)); break;
+                case pcpp::UDP: result["udp"] = parseUdpLayer(dynamic_cast<const pcpp::UdpLayer*>(currentLayer)); break;
+                case pcpp::ICMP: result["icmp"] = parseIcmpLayer(dynamic_cast<const pcpp::IcmpLayer*>(currentLayer)); break;
+                case pcpp::ICMPv6: result["icmpv6"] = parseIcmpV6Layer(dynamic_cast<const pcpp::IcmpV6Layer*>(currentLayer)); break;
+
+                // --- Tunneling & Encapsulation ---
+                case pcpp::PPPoESession:
+                case pcpp::PPPoEDiscovery:
+                    result["pppoe"] = parsePPPoELayer(currentLayer); break;
+                case pcpp::VXLAN: result["vxlan"] = parseVxlanLayer(dynamic_cast<const pcpp::VxlanLayer*>(currentLayer)); break;
+                case pcpp::MPLS:
+                    if (!result.contains("mpls")) result["mpls"] = json::array();
+                    result["mpls"].push_back(parseMplsLayer(dynamic_cast<const pcpp::MplsLayer*>(currentLayer)));
                     break;
-                case pcpp::ARP:
-                    result["arp"] = parseArpLayer(dynamic_cast<const pcpp::ArpLayer*>(currentLayer));
-                    break;
-                case pcpp::IPv4:
-                    result["ip"] = parseIPv4Layer(dynamic_cast<const pcpp::IPv4Layer*>(currentLayer));
-                    break;
-                case pcpp::IPv6:
-                    result["ipv6"] = parseIPv6Layer(dynamic_cast<const pcpp::IPv6Layer*>(currentLayer));
-                    break;
-                case pcpp::TCP:
-                    result["tcp"] = parseTcpLayer(dynamic_cast<const pcpp::TcpLayer*>(currentLayer));
-                    break;
-                case pcpp::UDP:
-                    result["udp"] = parseUdpLayer(dynamic_cast<const pcpp::UdpLayer*>(currentLayer));
-                    break;
-                case pcpp::ICMP:
-                    result["icmp"] = parseIcmpLayer(dynamic_cast<const pcpp::IcmpLayer*>(currentLayer));
-                    break;
-                case pcpp::DNS:
-                    result["dns"] = parseDnsLayer(dynamic_cast<const pcpp::DnsLayer*>(currentLayer));
-                    break;
+                case pcpp::GREv0:
+                case pcpp::GREv1:
+                    result["gre"] = parseGreLayer(dynamic_cast<const pcpp::GreLayer*>(currentLayer)); break;
+                case pcpp::AuthenticationHeader: // Correct enum for IPSec AH
+                case pcpp::ESP:                  // Correct enum for IPSec ESP
+                    result["ipsec"] = parseIPSecLayer(currentLayer); break;
+                case pcpp::GTPv1:
+                case pcpp::GTPv2:
+                    result["gtp"] = parseGtpLayer(currentLayer); break;
+                case pcpp::WireGuard: result["wireguard"] = parseWireGuardLayer(dynamic_cast<const pcpp::WireGuardLayer*>(currentLayer)); break;
+                
+                // --- OSI Layer 7 (Application) ---
                 case pcpp::HTTPRequest:
                 case pcpp::HTTPResponse:
-                    // HTTP는 여러 패킷에 걸쳐 전송될 수 있으므로, 이미 키가 있다면 배열로 만듦
-                    if (!result.contains("http")) {
-                        result["http"] = json::array();
-                    }
+                    if (!result.contains("http")) result["http"] = json::array();
                     result["http"].push_back(parseHttpLayer(currentLayer));
                     break;
                 case pcpp::SSL:
-                    // SSL/TLS도 여러 레코드가 올 수 있으므로 배열 처리
-                    if (!result.contains("tls")) {
-                        result["tls"] = json::array();
-                    }
+                    if (!result.contains("tls")) result["tls"] = json::array();
                     result["tls"].push_back(parseSSLLayer(dynamic_cast<const pcpp::SSLLayer*>(currentLayer)));
                     break;
+                case pcpp::SSH: result["ssh"] = parseSSHLayer(dynamic_cast<const pcpp::SSHLayer*>(currentLayer)); break;
+                case pcpp::DNS: result["dns"] = parseDnsLayer(dynamic_cast<const pcpp::DnsLayer*>(currentLayer)); break;
+                case pcpp::DHCP: result["dhcp"] = parseDhcpLayer(dynamic_cast<const pcpp::DhcpLayer*>(currentLayer)); break;
+                case pcpp::SIPRequest:
+                case pcpp::SIPResponse:
+                    result["sip"] = parseSipLayer(currentLayer); break;
+                case pcpp::FTPControl: // Use FTPControl for request/response
+                    result["ftp"] = parseFtpLayer(currentLayer); break;
+                case pcpp::Telnet: result["telnet"] = parseTelnetLayer(dynamic_cast<const pcpp::TelnetLayer*>(currentLayer)); break;
+                case pcpp::NTP: result["ntp"] = parseNtpLayer(dynamic_cast<const pcpp::NtpLayer*>(currentLayer)); break;
+                case pcpp::Radius: result["radius"] = parseRadiusLayer(dynamic_cast<const pcpp::RadiusLayer*>(currentLayer)); break;
+                case pcpp::LDAP: result["ldap"] = parseLdapLayer(dynamic_cast<const pcpp::LdapLayer*>(currentLayer)); break;
+                case pcpp::BGP: result["bgp"] = parseBgpLayer(dynamic_cast<const pcpp::BgpLayer*>(currentLayer)); break;
+
+                // --- Other Protocols ---
+                case pcpp::VRRPv2: // VRRP is split into v2 and v3
+                case pcpp::VRRPv3:
+                    result["vrrp"] = parseVrrpLayer(dynamic_cast<const pcpp::VrrpLayer*>(currentLayer)); break;
+                
+                // --- Payload/Trailer ---
                 case pcpp::GenericPayload:
+                case pcpp::FTPData: // FTPData is essentially a payload
                     result["payload"] = parsePayloadLayer(dynamic_cast<const pcpp::PayloadLayer*>(currentLayer));
-                    break;
-                case pcpp::SSH:
-                    result["ssh"] = parseSSHLayer(dynamic_cast<const pcpp::SSHLayer*>(currentLayer));
                     break;
                 default:
                     break;
