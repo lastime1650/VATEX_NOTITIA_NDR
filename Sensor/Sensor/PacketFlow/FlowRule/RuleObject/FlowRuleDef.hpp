@@ -2056,6 +2056,8 @@ namespace NDR
                                 std::string data = telnet->getDataAsString(false); // keep escape characters
                                 if (data.find(data_contains.value()) == std::string::npos) return false;
                             }
+
+                            
                             return true;
                         }
                     private:

@@ -1,6 +1,7 @@
 #ifndef PACKET_TO_JSON_HPP
 #define PACKET_TO_JSON_HPP
 
+#include <endian.h> // be16toh 함수를 위해 추가
 #include <string>
 #include <algorithm>
 #include <vector>
@@ -341,6 +342,7 @@ namespace PacketParser
         json j;
         if (!telnetLayer) return j;
         j["data"] = const_cast<pcpp::TelnetLayer*>(telnetLayer)->getDataAsString();
+        std::cout << "[TELENT] data; " << j.dump() << std::endl;
         return j;
     }
 
@@ -650,7 +652,24 @@ namespace PacketParser
 
             // ServerHello 처리
             if (auto serverHello = dynamic_cast<pcpp::SSLServerHelloMessage*>(msg)) {
-                msg_json["version"] = serverHello->getHandshakeVersion().toString();
+                auto* supportedVersionsExt = serverHello->getExtensionOfType<pcpp::SSLSupportedVersionsExtension>();
+                if (supportedVersionsExt != nullptr && !supportedVersionsExt->getSupportedVersions().empty()) {
+                    // 확장이 존재하면, 여기서 버전을 가져옴 (보통 목록의 첫 번째 값)
+                    msg_json["version"] = supportedVersionsExt->getSupportedVersions().at(0).toString();
+                } else {
+                    // 2. TLS 1.2 및 이전 방식: 확장이 없으면 레거시 헤더 필드에서 버전을 가져옴
+                    //    헤더가 유효한지 반드시 확인해야 합니다.
+                    if (serverHello->getServerHelloHeader() != nullptr) {
+                        // 네트워크 바이트 순서(Big Endian)를 호스트 바이트 순서로 변환하고,
+                        // 이 값을 사용하여 SSLVersion 객체를 생성합니다.
+                        uint16_t version_code = be16toh(serverHello->getServerHelloHeader()->handshakeVersion);
+                        msg_json["version"] = pcpp::SSLVersion(version_code).toString();
+                    } else {
+                        // 헤더조차 없는 비정상적인 패킷에 대한 예외 처리
+                        msg_json["version"] = "Unknown";
+                    }
+                }
+                // --- 수정 끝 ---
 
                 if (auto cs = serverHello->getCipherSuite())
                     msg_json["cipher_suites"] = json::array({ cs->asString() });

@@ -1,0 +1,19 @@
+{
+    "id": "telnet-initial-connection-detected",
+    "description": "Detects the initial telnet data",
+    "severity": "info",
+    "sequence": [
+        {
+            "index": "Telnet-Identification",
+            "condition": {
+                "telnet": {}
+            },
+            "direction": "in",
+            "goto": "Telnet-Identification",
+            "action": {
+                "type": "notice",
+                "message": "AHAHAHAHA"
+            }
+        }
+    ]
+}

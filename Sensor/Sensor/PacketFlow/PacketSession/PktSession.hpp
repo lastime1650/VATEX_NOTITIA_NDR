@@ -312,28 +312,34 @@ namespace NDR
                         else
                             ++session_ptr->PacketCount;
 
+						unsigned long long size = 0;
                         {
                             std::lock_guard<std::mutex> lock(Async_Mutex);
-                            if (Async_Processing_asyncs.size() >= AsyncMaximumCounts)
-                            {
-                                // FIX: 큐가 꽉 찼을 경우, 동기적으로 처리
-                                session_ptr->RuleDetection(*PacketInstance, PktDirection);
-                                return true;
-                            }
+							size = Async_Processing_asyncs.size();
                         }
+						if (size >= AsyncMaximumCounts)
+						{
+							// FIX: 큐가 꽉 찼을 경우, 동기적으로 처리
+							session_ptr->RuleDetection(*PacketInstance, PktDirection);
+							return true;
+						}
 
                         // FIX: 람다에서 shared_ptr를 값으로 캡처하여 안전하게 비동기 처리
-                        Async_Processing_asyncs.emplace_back(
-                            std::async(
-                                std::launch::async,
-                                [this, session_ptr, PacketInstance, PktDirection]() mutable
-                                {
-                                    session_ptr->RuleDetection(*PacketInstance, PktDirection);
-                                    // pcap 저장 로직이 필요하다면 여기에 추가
-                                    // ToPcap.AppendPacket(...);
-                                }
-                            )
-                        );
+						{
+							std::lock_guard<std::mutex> lock(Async_Mutex);
+							Async_Processing_asyncs.emplace_back(
+								std::async(
+									std::launch::async,
+									[this, session_ptr, PacketInstance, PktDirection]() mutable
+									{
+										session_ptr->RuleDetection(*PacketInstance, PktDirection);
+										// pcap 저장 로직이 필요하다면 여기에 추가
+										// ToPcap.AppendPacket(...);
+									}
+								)
+							);
+						}
+                        
                         return true;
                     }
 
