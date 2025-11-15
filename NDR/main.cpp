@@ -1,7 +1,6 @@
 #include "Server/NDRServer.hpp"
 
-#include <thread>   // std::this_thread::sleep_for
-#include <chrono>   // std::chrono::seconds
+#include "Server/APIServer/NDR_API_SERVER.hpp"
 
 int main()
 {
@@ -14,14 +13,34 @@ int main()
     NDR::Server::NDRServer Server(
         "192.168.1.205:29092",
         "NDR_SERVER",
-        "raw-ndr-sensor-linux"
+        "raw-ndr-sensor-linux",
+
+        /*
+            VATEX NOVA AI API Server
+        */
+        "192.168.1.205",
+        10302,
+
+        /*
+            VATEX SAPIENTIA SIEM API Connection
+        */
+        "192.168.1.205",
+        10900,
+
+        /*
+            VATEX INTELLINA INTELLIGENCE API Connection
+        */
+       "192.168.1.205",
+        51034
     );
     if(!Server.Run())
         throw std::runtime_error("NDRServer Init Start Failed");
     
     
-    std::this_thread::sleep_for(std::chrono::seconds(9999));
-
+    // NDR API SERVER OPEN
+    NDR::Server::API::APIServer APISvr("0.0.0.0", 30103, Server);
+    APISvr.Runner();
+    
 
     return 0;
 }

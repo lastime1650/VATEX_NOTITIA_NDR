@@ -3,6 +3,7 @@
 
 #include "../../util/util.hpp"
 #include "PacketToJson.hpp"
+#include "../PacketFlow/PacketStatus/PacketStatus.hpp"
 
 namespace NDR
 {
@@ -88,7 +89,15 @@ namespace NDR
 
                         const DefaultCurrentPacketInfo& CurrentPktInfo,
 
-                        const pcpp::Packet& packet
+                        const pcpp::Packet& packet,
+
+                        unsigned long long PktSize,
+                        unsigned long long PktSizeMaxCycle,
+
+                        unsigned long long egress_packet_count,
+                        unsigned long long ingress_packet_count,
+                        unsigned long long egress_packet_countCycle=0,
+                        unsigned long long ingress_packet_countCycle=0
                     )
                     {
                         /*
@@ -109,6 +118,14 @@ namespace NDR
                                     {"sensorid", sensor_id},
                                     {"flow_session_id", Flow_Session_Id},
                                     {"nano_timestamp", NanoTimestamp},
+
+                                    {"current_egress_packet_count", egress_packet_count },
+                                    {"current_egress_packet_cycle_count", egress_packet_countCycle },
+                                    {"current_ingress_packet_count", ingress_packet_count },
+                                    {"current_ingress_packet_cycle_count", ingress_packet_countCycle },
+
+                                    {"current_packet_size", PktSize },
+                                    {"current_packet_size_cycle_count", PktSizeMaxCycle }
                                 }},
                                 {"body",{
                                         {
@@ -127,9 +144,8 @@ namespace NDR
                                                 {"direction", CurrentPktInfo.direction}
                                             }
                                         },
-                                        {
-                                            "packet", PacketParser::packetToJson(packet)
-                                        }
+                                        
+                                        {"packet", PacketParser::packetToJson(packet) }
                                     }
                                 }
                             }
@@ -146,10 +162,15 @@ namespace NDR
                         unsigned long long session_lastseen_timestamp, // 해당 세션의 가장 마지막에 저장된 타임스탬프
                         unsigned long long current_timeout_value,        // 현재 적용된 타임아웃 설정값 ( 초 기준 )
 
+                        const NDR::Sensor::PacketStatus::PacketStatus& Status,
 
-                        unsigned long long PktCount,
-                        unsigned long long PktCountMaxCycle
+                        unsigned long long PktSize,
+                        unsigned long long PktSizeMaxCycle,
 
+                        unsigned long long egress_packet_count,
+                        unsigned long long ingress_packet_count,
+                        unsigned long long egress_packet_countCycle,
+                        unsigned long long ingress_packet_countCycle
                     )
                     {
                         // 세션 시작
@@ -158,19 +179,27 @@ namespace NDR
                                 {"header",{
                                     {"sensorid", sensor_id},
                                     {"flow_session_id", Flow_Session_Id},
-                                    {"nano_timestamp", NanoTimestamp}
+                                    {"nano_timestamp", NanoTimestamp},
+
+                                    {"current_egress_packet_count", egress_packet_count },
+                                    {"current_egress_packet_cycle_count", egress_packet_countCycle },
+                                    {"current_ingress_packet_count", ingress_packet_count },
+                                    {"current_ingress_packet_cycle_count", ingress_packet_countCycle },
+
+                                    {"current_packet_size", PktSize },
+                                    {"current_packet_size_cycle_count", PktSizeMaxCycle },
+                                    
                                 }},
                                 {"body",{
                                         {
                                             SessionTimeout, // type
                                             {
                                                 {"session_lastseen_timestamp", session_lastseen_timestamp},
-                                                {"timeout_value", current_timeout_value },
-
-                                                {"pktcount", PktCount },
-                                                {"pktcountmaxcycle", PktCountMaxCycle }
+                                                {"timeout_value", current_timeout_value }
                                             }
-                                        }
+                                        },
+
+                                        { "status", Status.ToJson() }
                                     }
                                 }
                             }
@@ -185,7 +214,17 @@ namespace NDR
 
                         const SessionRuleDetectInfo& RuleInfo,
 
-                        const pcpp::Packet& packet
+                        const pcpp::Packet& packet,
+
+                        const NDR::Sensor::PacketStatus::PacketStatus& Status,
+
+                        unsigned long long PktSize,
+                        unsigned long long PktSizeMaxCycle,
+
+                        unsigned long long egress_packet_count,
+                        unsigned long long ingress_packet_count,
+                        unsigned long long egress_packet_countCycle,
+                        unsigned long long ingress_packet_countCycle
                     )
                     {
                         // 세션 시작
@@ -194,7 +233,15 @@ namespace NDR
                                 {"header",{
                                     {"sensorid", sensor_id},
                                     {"flow_session_id", Flow_Session_Id},
-                                    {"nano_timestamp", NanoTimestamp}
+                                    {"nano_timestamp", NanoTimestamp},
+
+                                    {"current_egress_packet_count", egress_packet_count },
+                                    {"current_egress_packet_cycle_count", egress_packet_countCycle },
+                                    {"current_ingress_packet_count", ingress_packet_count },
+                                    {"current_ingress_packet_cycle_count", ingress_packet_countCycle },
+
+                                    {"current_packet_size", PktSize },
+                                    {"current_packet_size_cycle_count", PktSizeMaxCycle }
                                 }},
                                 {"body",{
                                         {
@@ -208,12 +255,12 @@ namespace NDR
                                                 {"stage_index", RuleInfo.DetectedStage.index},
 
                                                 {"stage_action", RuleInfo.DetectedStage.action.Action},
-                                                {"stage_action_message", RuleInfo.DetectedStage.action.message},
+                                                {"stage_action_message", RuleInfo.DetectedStage.action.message}
                                             }
                                         },
-                                        {
-                                            "packet", PacketParser::packetToJson(packet)
-                                        }
+
+                                        {"packet", PacketParser::packetToJson(packet) },
+                                        { "status", Status.ToJson() }
                                     }
                                 }
                             }

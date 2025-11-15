@@ -2,6 +2,7 @@
 #define NDR_SERVER_HPP
 
 #include "../Util/util.hpp"
+#include "AIMananger/AIManager.hpp"
 
 #include "FlowSessionTracker/FlowSessionTracker.hpp"
 
@@ -18,10 +19,26 @@ namespace NDR
                 NDRServer(
                     std::string BrokerConnection,
                     std::string groupid,
-                    std::string topic
+                    std::string topic,
+
+
+                    std::string VATEX_NOVA_AI_API_ServerIp,
+                    unsigned int VATEX_NOVA_AI_API_ServerPort,
+
+                    std::string VATEX_SAPIENTIA_SIEM_API_ServerIp,
+                    unsigned int VATEX_SAPIENTIA_SIEM_API_ServerPort,
+
+                    std::string VATEX_INTELLINA_API_ServerIp,
+                    unsigned int VATEX_INTELLINA_API_ServerPort = 51034
                 )
                 : Kafka(BrokerConnection, groupid, topic),
-                SessionTracker(Kafka)
+
+                SiemClient(VATEX_SAPIENTIA_SIEM_API_ServerIp, VATEX_SAPIENTIA_SIEM_API_ServerPort),
+                IntelligenceManager(VATEX_INTELLINA_API_ServerIp, VATEX_INTELLINA_API_ServerPort),
+                AIManager(VATEX_NOVA_AI_API_ServerIp, VATEX_NOVA_AI_API_ServerPort, SiemClient),
+
+
+                SessionTracker(Kafka, AIManager, IntelligenceManager, SiemClient)
                 {
 
                 }
@@ -29,6 +46,7 @@ namespace NDR
 
                 bool Run()
                 {
+                    std::cout << "Run";
                     if(is_running)
                         return false;
 
@@ -55,6 +73,13 @@ namespace NDR
                 bool is_running = false;
                 NDR::Util::Kafka::Kafka_Consumer Kafka;
                 NDR::Server::SessionTracking::SessionTracker SessionTracker;
+
+
+
+
+                NDR::Util::ToSiem::SiemClient SiemClient;
+                NDR::Util::Intelligence::VATEX_INTELLINA_INTELLIGENCE IntelligenceManager;
+                NDR::AI::AI_MANAGER AIManager;
         };
     }
 }
